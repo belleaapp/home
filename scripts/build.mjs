@@ -16,6 +16,10 @@ import QRCode from 'qrcode';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(ROOT, 'dist');
 const SAMPLE = process.argv.includes('--exemple');
+// Préfixe des adresses quand le site n'est pas à la racine du domaine
+// (ex. « /home » sur belleaapp.github.io/home avant le branchement de bellea.store).
+// Fourni par GitHub Actions (configure-pages) ; vide avec un domaine personnalisé.
+const BASE = (process.env.BASE_PATH || '').replace(/\/$/, '');
 
 // ---------------------------------------------------------------------------
 // Réglages
@@ -700,8 +704,12 @@ ${urls.map((u) => `  <url><loc>${SITE.url}${u}</loc><lastmod>${today}</lastmod><
 // Typographie française : espace insécable avant ? ! : ; % » et après «
 const frenchSpaces = (html) => html.replace(/ ([?!:;%»])/g, '\u00a0$1').replace(/« /g, '«\u00a0');
 
+const withBase = (html) => !BASE ? html : html
+  .replace(/(href|src)="\/(?!\/)/g, `$1="${BASE}/`)
+  .replace(/(srcset="|, )\/assets\//g, `$1${BASE}/assets/`);
+
 async function write(rel, content) {
-  if (rel.endsWith('.html')) content = frenchSpaces(content);
+  if (rel.endsWith('.html')) content = withBase(frenchSpaces(content));
   const file = path.join(DIST, rel);
   await mkdir(path.dirname(file), { recursive: true });
   await writeFile(file, content);
@@ -713,7 +721,8 @@ async function main() {
   await mkdir(DIST, { recursive: true });
   await cp(path.join(ROOT, 'src/img'), path.join(DIST, 'assets/img'), { recursive: true });
   await cp(path.join(ROOT, 'src/fonts'), path.join(DIST, 'assets/fonts'), { recursive: true });
-  await cp(path.join(ROOT, 'src/site.css'), path.join(DIST, 'assets/site.css'));
+  const css = await readFile(path.join(ROOT, 'src/site.css'), 'utf8');
+  await write('assets/site.css', css.replaceAll('url("/assets/', `url("${BASE}/assets/`));
   await cp(path.join(ROOT, 'src/site.js'), path.join(DIST, 'assets/site.js'));
 
   const qr = await QRCode.toString(play('qr-code'), { type: 'svg', margin: 0, errorCorrectionLevel: 'M', color: { dark: '#141414', light: '#ffffff' } });
@@ -732,7 +741,7 @@ async function main() {
   await write('.nojekyll', '');              // GitHub Pages : publier aussi /.well-known/
   await write('robots.txt', `User-agent: *\nAllow: /\n\nSitemap: ${SITE.url}/sitemap.xml\n`);
 
-  console.log(`Site généré dans dist/ : ${products.length} fiches produit${SAMPLE ? ' (exemple)' : ''}.`);
+  console.log(`Site généré dans dist/ : ${products.length} fiches produit${SAMPLE ? ' (exemple)' : ''}${BASE ? `, adresses sous ${BASE}/` : ''}.`);
 }
 
 main().catch((e) => { console.error(e.message); process.exit(1); });

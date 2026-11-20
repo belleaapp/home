@@ -318,7 +318,7 @@ function home(products, qrSvg) {
       <div class="hero-visual">
         <div class="arch"></div>
         ${phone('ecran-parfums', "Écran Parfums de l'application Bellea", 'phone-back', true)}
-        ${phone('ecran-fiche-soin', "Fiche produit dans l'application : The Ordinary Acide Glycolique 7 %, 6 000 DA", 'phone-front', true)}
+        ${phone('ecran-fiche-soin', "Fiche produit dans l'application : The Ordinary Acide Glycolique 7 %", 'phone-front', true)}
       </div>
     </div>
     <ul class="facts" role="list">
@@ -389,7 +389,7 @@ function home(products, qrSvg) {
   <div class="wrap split reverse">
     <div class="screens">
       <div class="arch"></div>
-      ${phone('ecran-fiche-parfum', "Fiche parfum dans l'application : Yves Saint Laurent Libre, 90 ml, 32 000 DA, achat en flacon entier ou au millilitre")}
+      ${phone('ecran-fiche-parfum', "Fiche parfum dans l'application : Yves Saint Laurent Libre, 90 ml, achat en flacon entier ou au millilitre")}
     </div>
     <div>
       <h2>Votre parfum en flacon entier, ou au millilitre.</h2>
@@ -397,7 +397,7 @@ function home(products, qrSvg) {
       <ul class="feature-list">
         <li>${icon.flask}<div><strong>Achat au ml</strong><span>Une petite quantité d'un grand parfum, au prix juste.</span></div></li>
         <li>${icon.filter}<div><strong>Filtres par marque, version et pour qui</strong><span>Eau de parfum, eau de toilette, femme, homme ou mixte.</span></div></li>
-        <li>${icon.star}<div><strong>Des points sur chaque flacon</strong><span>Par exemple +20 points fidélité sur un parfum à ${da(32000)}.</span></div></li>
+        <li>${icon.star}<div><strong>Des points sur chaque flacon</strong><span>Chaque fiche affiche les points fidélité que le parfum vous rapporte.</span></div></li>
       </ul>
     </div>
   </div>

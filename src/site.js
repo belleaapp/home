@@ -7,15 +7,22 @@
   const btn = document.querySelector('.menu-btn');
   const nav = document.getElementById('nav');
   if (btn && nav) {
-    btn.addEventListener('click', () => {
-      const open = nav.classList.toggle('open');
+    const setMenu = (open) => {
+      nav.classList.toggle('open', open);
+      document.body.classList.toggle('menu-open', open);
+      document.body.style.overflow = open ? 'hidden' : '';
       btn.setAttribute('aria-expanded', String(open));
       btn.setAttribute('aria-label', open ? 'Fermer le menu' : 'Ouvrir le menu');
-      document.body.style.overflow = open ? 'hidden' : '';
+    };
+    btn.addEventListener('click', () => setMenu(!nav.classList.contains('open')));
+    nav.addEventListener('click', (e) => { if (e.target.closest('a')) setMenu(false); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && nav.classList.contains('open')) { setMenu(false); btn.focus(); }
     });
-    nav.addEventListener('click', (e) => {
-      if (e.target.closest('a')) { nav.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); document.body.style.overflow = ''; }
-    });
+    // Passage en largeur ordinateur menu ouvert : on referme pour ne pas bloquer le défilement.
+    matchMedia('(min-width: 861px)').addEventListener('change', (e) => { if (e.matches) setMenu(false); });
+    // Retour arrière vers une page restée en cache avec le menu ouvert.
+    addEventListener('pageshow', () => setMenu(false));
   }
 
   // Sur Android : « Ouvrir dans l'app » ouvre l'app si elle est installée

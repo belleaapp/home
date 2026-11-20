@@ -46,6 +46,8 @@ const esc = (s = '') => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').r
 const da = (n) => `${Math.round(n).toLocaleString('fr-FR').replace(/ | /g, ' ')} DA`;
 const norm = (s = '') => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const clip = (s = '', n = 155) => (s.length > n ? s.slice(0, n - 1).replace(/\s+\S*$/, '') + '…' : s);
+const fullName = (p) => (norm(p.nom).startsWith(norm(p.marque)) ? p.nom : `${p.marque} ${p.nom}`.trim());
+const FALLBACK_IMG = '/assets/img/bellea_pipette_b.svg';
 const productPath = (p) => `/${p.type === 'parfum' ? 'parfum' : 'produit'}/${encodeURIComponent(p.id)}/`;
 
 const icon = {
@@ -60,7 +62,8 @@ const icon = {
   calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
   cart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2.2 10.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.1L21 8H6.2"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg>',
   search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>',
-  menu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+  close: '<svg class="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  menu: '<svg class="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
   check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
   filter: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>',
   flask: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 3h5M10 3v6.5L5 18.5A1.7 1.7 0 0 0 6.5 21h11a1.7 1.7 0 0 0 1.5-2.5L14 9.5V3"/><path d="M7.5 15h9"/></svg>',
@@ -98,7 +101,18 @@ async function loadProducts() {
       description: d.description, utilisation: d.utilisation, ingredient: d.ingredient,
     })),
   ];
-  return list.filter((p) => p.nom && p.prix > 0);
+  return list
+    .filter((p) => p.nom && Number(p.prix) > 0)
+    .map((p) => ({
+      ...p,
+      nom: String(p.nom).trim(),
+      marque: String(p.marque || '').trim(),
+      image: p.image && /^https?:\/\//.test(p.image) ? p.image : FALLBACK_IMG,
+      prix: Number(p.prix),
+      ancienPrix: Number(p.ancienPrix) || 0,
+      points: Number(p.points) || 0,
+      volume: Number(p.volume) || 0,
+    }));
 }
 
 const eq = (field, value) => ({ fieldFilter: { field: { fieldPath: field }, op: 'EQUAL', value: { booleanValue: value } } });
@@ -179,7 +193,7 @@ ${jsonld}
       <a class="btn btn-primary nav-cta" href="${play('menu')}">${icon.download}Télécharger l'app</a>
     </nav>
     <a class="btn btn-primary btn-small header-cta" href="${play('entete')}">Télécharger l'app</a>
-    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="nav" aria-label="Ouvrir le menu">${icon.menu}</button>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="nav" aria-label="Ouvrir le menu">${icon.menu}${icon.close}</button>
   </div>
 </header>
 <main id="contenu">
@@ -245,7 +259,7 @@ function subtitle(p) {
 function card(p) {
   const search = norm([p.nom, p.marque, p.effet, p.version, p.pourQui].filter(Boolean).join(' '));
   return `<a class="card" href="${productPath(p)}" data-type="${p.type}" data-brand="${esc(p.marque)}" data-search="${esc(search)}">
-  <div class="card-img"><img src="${esc(p.image)}" alt="${esc(`${p.marque} ${p.nom}`)}" loading="lazy" width="300" height="300"></div>
+  <div class="card-img"><img src="${esc(p.image)}" alt="${esc(fullName(p))}" loading="lazy" width="300" height="300"></div>
   <div class="card-body">
     <span class="card-brand">${esc(p.marque)}</span>
     <span class="card-name">${esc(p.nom)}</span>
@@ -301,7 +315,7 @@ function home(products, qrSvg) {
         </div>
         <p class="hero-note">Gratuit, pour Android.</p>
       </div>
-      <div class="hero-visual" aria-hidden="false">
+      <div class="hero-visual">
         <div class="arch"></div>
         ${phone('ecran-parfums', "Écran Parfums de l'application Bellea", 'phone-back', true)}
         ${phone('ecran-fiche-soin', "Fiche produit dans l'application : The Ordinary Acide Glycolique 7 %, 6 000 DA", 'phone-front', true)}
@@ -605,10 +619,10 @@ function productPage(p, all) {
   const related = all.filter((o) => o.id !== p.id && o.type === p.type && o.marque === p.marque).slice(0, 4);
   const more = related.length ? related : all.filter((o) => o.id !== p.id && o.type === p.type).slice(0, 4);
   const appLink = `href="${play('fiche-produit')}" data-app-path="${url}"`;
-  const desc = clip(`${p.marque} ${p.nom}${subtitle(p) ? `, ${subtitle(p).toLowerCase()}` : ''} à ${da(p.prix)}. ${p.description || "Commandez-le dans l'application Bellea, livraison dans toutes les wilayas et paiement à la livraison."}`);
+  const desc = clip(`${fullName(p)}${subtitle(p) ? `, ${subtitle(p).toLowerCase()}` : ''} à ${da(p.prix)}. ${p.description || "Commandez-le dans l'application Bellea, livraison dans toutes les wilayas et paiement à la livraison."}`);
   const jsonld = `<script type="application/ld+json">${JSON.stringify({
     '@context': 'https://schema.org', '@type': 'Product',
-    name: `${p.marque} ${p.nom}`, brand: { '@type': 'Brand', name: p.marque },
+    name: fullName(p), brand: { '@type': 'Brand', name: p.marque },
     image: p.image.startsWith('http') ? p.image : SITE.url + p.image,
     description: p.description || undefined,
     offers: { '@type': 'Offer', price: String(p.prix), priceCurrency: 'DZD', availability: 'https://schema.org/InStock', url: SITE.url + url },
@@ -624,7 +638,7 @@ function productPage(p, all) {
     <a href="/produits/${p.type === 'parfum' ? '?type=parfum' : ''}">${kind}</a><span aria-hidden="true">/</span><span>${esc(p.marque)}</span>
   </nav>
   <article class="product">
-    <div class="product-media"><img src="${esc(p.image)}" alt="${esc(`${p.marque} ${p.nom}`)}" width="600" height="600" fetchpriority="high"></div>
+    <div class="product-media"><img src="${esc(p.image)}" alt="${esc(fullName(p))}" width="600" height="600" fetchpriority="high"></div>
     <div>
       <p class="product-brand">${esc(p.marque)}</p>
       <h1>${esc(p.nom)}</h1>
@@ -656,7 +670,7 @@ ${more.length ? `<section class="section section-cream">
 </div>`;
 
   return layout({
-    title: `${p.marque} ${p.nom} : ${da(p.prix)} | Bellea`,
+    title: `${fullName(p)} : ${da(p.prix)} | Bellea`,
     description: desc, path: url, current: '/produits/', body, image: p.image, jsonld, bodyClass: 'has-sticky',
   });
 }

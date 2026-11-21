@@ -8,7 +8,8 @@
 // page et liens Google Play sont définis une seule fois, ici.
 
 import { mkdir, rm, cp, writeFile, readFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import QRCode from 'qrcode';
@@ -722,8 +723,24 @@ const withBase = (html) => !BASE ? html : html
   .replace(/(href|src)="\/(?!\/)/g, `$1="${BASE}/`)
   .replace(/(srcset="|, )\/assets\//g, `$1${BASE}/assets/`);
 
+// Empreinte du contenu dans l'adresse des fichiers (…/ecran.webp?v=3f2a9c1b) :
+// quand une image, le CSS ou le JS change, les navigateurs chargent la
+// nouvelle version au lieu de garder l'ancienne en cache.
+const ASSET_SRC = { 'assets/img/': 'src/img/', 'assets/fonts/': 'src/fonts/', 'assets/site.css': 'src/site.css', 'assets/site.js': 'src/site.js' };
+const hashCache = new Map();
+function assetHash(assetPath) {
+  if (hashCache.has(assetPath)) return hashCache.get(assetPath);
+  const prefix = Object.keys(ASSET_SRC).find((k) => assetPath.startsWith(k));
+  const file = prefix && path.join(ROOT, ASSET_SRC[prefix] + assetPath.slice(prefix.length));
+  const h = file && existsSync(file) ? createHash('md5').update(readFileSync(file)).digest('hex').slice(0, 8) : '';
+  hashCache.set(assetPath, h);
+  return h;
+}
+const withVersions = (html) => html.replace(/\/(assets\/[\w./-]+\.(?:webp|png|svg|jpg|css|js|woff2))(?![\w?])/g,
+  (m, asset) => { const h = assetHash(asset); return h ? `${m}?v=${h}` : m; });
+
 async function write(rel, content) {
-  if (rel.endsWith('.html')) content = withBase(frenchSpaces(content));
+  if (rel.endsWith('.html')) content = withVersions(withBase(frenchSpaces(content)));
   const file = path.join(DIST, rel);
   await mkdir(path.dirname(file), { recursive: true });
   await writeFile(file, content);

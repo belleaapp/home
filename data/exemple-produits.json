@@ -13,7 +13,11 @@
       "forme": "Lotion",
       "volume": 240,
       "unite": "ml",
-      "typeDePeau": [],
+      "typeDePeau": [
+        "Normal",
+        "Mixte",
+        "Grasse"
+      ],
       "points": 5,
       "description": "",
       "utilisation": "",
@@ -31,7 +35,11 @@
       "forme": "",
       "volume": 0,
       "unite": "",
-      "typeDePeau": [],
+      "typeDePeau": [
+        "Normal",
+        "Sèche",
+        "Mixte"
+      ],
       "points": 0,
       "description": "",
       "utilisation": "",
@@ -49,7 +57,10 @@
       "forme": "",
       "volume": 0,
       "unite": "",
-      "typeDePeau": [],
+      "typeDePeau": [
+        "Grasse",
+        "Mixte"
+      ],
       "points": 0,
       "description": "",
       "utilisation": "",

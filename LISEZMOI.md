@@ -11,6 +11,7 @@ l'application sur Google Play.
 | `/produits/` | Catalogue soins et parfums, avec recherche et filtre par marque |
 | `/produit/<id>/` | Fiche d'un soin (id = document de la collection `produit`) |
 | `/parfum/<id>/` | Fiche d'un parfum (id = document de la collection `Parfum`) |
+| `/test-peau/` | Test « Quel est mon type de peau ? » (8 questions, mêmes calculs que l'app) avec les soins adaptés du catalogue |
 | `/pharmaciens/` | Dr. Soumia et Dr. Fodil |
 | `/livraison/` | Livraison et paiement |
 | `/faq/` | Questions fréquentes |
@@ -78,6 +79,7 @@ Rien n'est cassé.
 ## Fichiers
 
 - `scripts/textes.mjs` : **tous les textes du site, en français et en arabe**. Pour changer une phrase, modifiez-la ici dans les deux langues.
+- `scripts/quiz.mjs` : questions et résultats du test de peau (copie de `lib/qst/widgets/skin_type_quiz.dart` de l'app : modifier les deux ensemble).
 - `scripts/build.mjs` : génération des pages (mise en page commune, carrousels, fiches produit, réglages).
 - `src/site.css`, `src/site.js` : styles et comportements.
 - `src/img`, `src/fonts` : images, logos, polices PT Serif et Inter (hébergées sur le site).

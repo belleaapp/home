@@ -14,6 +14,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import QRCode from 'qrcode';
 import { LANGS, textes } from './textes.mjs';
+import { quizData, skinLabel } from './quiz.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(ROOT, 'dist');
@@ -357,6 +358,7 @@ const originIcons = [icon.pharmacist, icon.globe, icon.shield, icon.refund];
 function home(lang, products, qrSvg) {
   const t = T[lang];
   const H = t.home;
+  const promos = products.filter((p) => p.ancienPrix > p.prix);
   const soins = pickRail(products.filter((p) => p.type === 'soin'));
   const parfums = pickRail(products.filter((p) => p.type === 'parfum'));
   const appJsonLd = `<script type="application/ld+json">${JSON.stringify({
@@ -394,12 +396,25 @@ function home(lang, products, qrSvg) {
 
 <section class="rails" id="produits">
   <div class="wrap">
-    ${rail({ lang, id: 'soins', h: H.soins.h, link: loc(lang, '/produits/'), items: soins, eager: true })}
+    ${promos.length >= 2 ? rail({ lang, id: 'promos', h: H.promo.h, sub: H.promo.sub, link: loc(lang, '/produits/'), items: pickRail(promos), eager: true }) : ''}
+    ${rail({ lang, id: 'soins', h: H.soins.h, link: loc(lang, '/produits/'), items: soins, eager: promos.length < 2 })}
     ${rail({ lang, id: 'parfums', h: H.parfums.h, sub: H.parfums.sub, link: loc(lang, '/produits/?type=parfum'), items: parfums })}
   </div>
 </section>
 
-<section class="section section-cream" id="origine">
+<section class="section section-cream" id="app">
+  <div class="wrap">
+    <div class="section-head">
+      <div><h2>${H.app.h}</h2><p class="section-lead">${H.app.sub}</p></div>
+    </div>
+    <ul class="shots" role="list">
+      ${H.app.shots.map(([img, cap, alt]) => `<li><figure>${phone(img, alt)}<figcaption>${cap}</figcaption></figure></li>`).join('\n      ')}
+    </ul>
+    <div class="shots-cta">${playButton(lang, 'captures', H.cta, 'btn-primary btn-lg')}</div>
+  </div>
+</section>
+
+<section class="section origin" id="origine">
   <div class="wrap">
     <h2>${H.origin.h}</h2>
     <ul class="g-grid" role="list">
@@ -408,14 +423,17 @@ function home(lang, products, qrSvg) {
   </div>
 </section>
 
-<section class="section" id="conseil">
+<section class="section section-cream" id="conseil">
   <div class="wrap split">
     <div>
       <h2>${H.conseil.h}</h2>
       <ol class="steps steps-compact">
         ${H.conseil.steps.map((s) => `<li><strong>${s}</strong></li>`).join('\n        ')}
       </ol>
-      ${playButton(lang, 'conseil', H.conseil.cta, 'btn-primary', '')}
+      <div class="conseil-actions">
+        ${playButton(lang, 'conseil', H.conseil.cta, 'btn-primary', '')}
+        <a class="link" href="${loc(lang, '/test-peau/')}">${H.conseil.quiz}</a>
+      </div>
       <div class="team-mini">
         <p class="team-mini-h">${H.team.h}</p>
         ${t.team.map((m) => `<div class="mini">${portrait(m)}<div><strong>${m.name}</strong><span>${m.role}</span></div></div>`).join('\n        ')}
@@ -434,7 +452,7 @@ function home(lang, products, qrSvg) {
   </div>
 </section>
 
-<section class="strip section-cream">
+<section class="strip">
   <div class="wrap">
     <ul class="strip-grid" role="list">
       ${H.order.map(([ti, d], i) => `<li>${[icon.truck, icon.cash, icon.gift][i]}<div><strong>${ti}</strong><span>${d}</span></div></li>`).join('\n      ')}
@@ -468,6 +486,39 @@ function home(lang, products, qrSvg) {
 </section>`;
 
   return layout({ lang, title: H.title, description: H.desc, path: '/', current: '/', body, jsonld: appJsonLd + faqJsonLd(faqItems) });
+}
+
+function quizPage(lang, products) {
+  const t = T[lang];
+  const Q = t.pages.quiz;
+  const da = daFor(lang);
+  const data = {
+    ...quizData(lang),
+    play: playL(lang, 'test-peau'),
+    products: products
+      .filter((p) => p.type === 'soin' && (p.typeDePeau || []).length)
+      .map((p) => ({
+        n: fullName(p), b: p.marque, p: da(p.prix), s: p.typeDePeau,
+        i: p.image.startsWith('/') ? BASE + p.image : p.image,
+        u: BASE + loc(lang, productPath(p)),
+      })),
+    str: { progress: Q.progress, back: Q.back, restart: Q.restart, resultH: Q.resultH, sensitive: Q.sensitive, productsH: Q.productsH, ctaH: Q.ctaH, ctaP: Q.ctaP, ctaBtn: Q.ctaBtn, note: Q.note },
+  };
+  const json = JSON.stringify(data).replace(/</g, '\\u003c');
+  const body = `
+<section class="page-head" style="padding-bottom:24px">
+  <div class="wrap">
+    <h1>${Q.h1}</h1>
+    <p>${Q.sub}</p>
+  </div>
+</section>
+<section class="wrap" style="padding-bottom:var(--section)">
+  <div class="quiz" id="quiz" aria-live="polite">
+    <noscript><p>${Q.noscript}</p>${playButton(lang, 'test-peau', t.ctaHeader)}</noscript>
+  </div>
+</section>
+<script type="application/json" id="quiz-data">${json}</script>`;
+  return layout({ lang, title: Q.title, description: Q.desc, path: '/test-peau/', current: '/test-peau/', body, appbar: false });
 }
 
 function pharmaciens(lang) {
@@ -580,7 +631,7 @@ function productPage(lang, p, all) {
   const kind = p.type === 'parfum' ? P.parfums : P.soins;
   const tags = p.type === 'parfum'
     ? [p.version, p.pourQui, p.volume ? `${p.volume} ${P.unit(p.unite)}` : '', p.auMl ? P.auMl : '']
-    : [p.effet, p.forme, p.volume ? `${p.volume} ${P.unit(p.unite)}` : '', ...(p.typeDePeau || []).map(P.peau)];
+    : [p.effet, p.forme, p.volume ? `${p.volume} ${P.unit(p.unite)}` : '', ...(p.typeDePeau || []).map((v) => skinLabel(v, lang))];
   const related = all.filter((o) => o.id !== p.id && o.type === p.type && o.marque === p.marque).slice(0, 4);
   const more = related.length ? related : all.filter((o) => o.id !== p.id && o.type === p.type).slice(0, 4);
   const appLink = `href="${playL(lang, 'fiche-produit')}" data-app-path="${url}"`;
@@ -669,7 +720,7 @@ const assetlinks = JSON.stringify([{
 
 function sitemap(products) {
   const today = new Date().toISOString().slice(0, 10);
-  const paths = ['/', '/produits/', '/pharmaciens/', '/livraison/', '/faq/', ...products.map(productPath)];
+  const paths = ['/', '/produits/', '/test-peau/', '/pharmaciens/', '/livraison/', '/faq/', ...products.map(productPath)];
   const urls = LANGS.flatMap((l) => paths.map((p) => loc(l, p)));
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -734,6 +785,7 @@ async function main() {
     await write(`${dir}index.html`, home(lang, products, qrSvg));
     await write(`${dir}produits/index.html`, catalogue(lang, products));
     await write(`${dir}pharmaciens/index.html`, pharmaciens(lang));
+    await write(`${dir}test-peau/index.html`, quizPage(lang, products));
     await write(`${dir}livraison/index.html`, livraison(lang));
     await write(`${dir}faq/index.html`, faqPage(lang));
     for (const p of products) await write(`${dir}${productPath(p).slice(1)}index.html`, productPage(lang, p, products));

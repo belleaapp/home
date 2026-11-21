@@ -16,14 +16,14 @@ function fr(h, free) {
   return {
     lang: 'fr', dir: 'ltr', ogLocale: 'fr_DZ', otherLang: 'العربية', otherLangCode: 'ar',
     skip: 'Aller au contenu', menuOpen: 'Ouvrir le menu', menuClose: 'Fermer le menu', home: 'Bellea, accueil',
-    nav: [['/produits/', 'Catalogue'], ['/pharmaciens/', 'Les pharmaciens'], ['/livraison/', 'Livraison'], ['/faq/', 'Questions']],
+    nav: [['/produits/', 'Catalogue'], ['/test-peau/', 'Test de peau'], ['/pharmaciens/', 'Les pharmaciens'], ['/livraison/', 'Livraison']],
     ctaHeader: "Télécharger l'app",
     sticky: { title: 'Bellea', sub: 'Gratuit sur Google Play', btn: 'Installer' },
 
     footer: {
       tagline: "Dermo-cosmétique et parfums d'origine, choisis par des pharmaciens. Commandez dans l'application.",
       site: 'Le site', app: "L'application",
-      links: [['/produits/', 'Catalogue des soins'], ['/produits/?type=parfum', 'Catalogue des parfums'], ['/pharmaciens/', 'Les pharmaciens'], ['/livraison/', 'Livraison et paiement'], ['/faq/', 'Questions fréquentes']],
+      links: [['/produits/', 'Catalogue des soins'], ['/produits/?type=parfum', 'Catalogue des parfums'], ['/test-peau/', 'Test de type de peau'], ['/pharmaciens/', 'Les pharmaciens'], ['/livraison/', 'Livraison et paiement'], ['/faq/', 'Questions fréquentes']],
       play: 'Bellea sur Google Play', cgu: 'CGU et confidentialité', del: 'Supprimer mon compte',
       bottom: 'Application Android, boutique 100 % en ligne',
     },
@@ -35,9 +35,20 @@ function fr(h, free) {
       lead: "Produits d'origine européenne. Livraison dans toutes les wilayas, paiement à la livraison.",
       cta: "Télécharger l'app", ctaAlt: 'Voir les produits', note: 'Gratuit, sur Android',
       chips: ["Produits d'origine", 'Satisfait ou remboursé', 'Paiement à la livraison'],
+      promo: { h: 'En promotion', sub: 'Les offres du moment, dans l’app' },
       soins: { h: 'Soins dermo-cosmétiques', link: 'Tout voir' },
       parfums: { h: 'Parfums', sub: 'En flacon entier ou au millilitre', link: 'Tout voir' },
       prev: 'Précédent', next: 'Suivant',
+      app: {
+        h: "Tout se passe dans l'app.",
+        sub: 'Catalogue, conseil, commande et fidélité, au même endroit.',
+        shots: [
+          ['ecran-boutique', 'Filtrez par objectif et type de peau', "Écran Boutique de l'application : filtres par marque, objectif et type de peau"],
+          ['ecran-fiche-soin', "Mode d'emploi, stock et points fidélité", "Fiche d'un soin dans l'application"],
+          ['ecran-parfums', 'Les parfums par marque et version', "Écran Parfums de l'application"],
+          ['ecran-fiche-parfum', 'En flacon entier ou au millilitre', "Fiche d'un parfum dans l'application, achat entier ou au millilitre"],
+        ],
+      },
       origin: {
         h: "Des produits d'origine, garantis.",
         items: [
@@ -51,6 +62,7 @@ function fr(h, free) {
         h: 'Votre routine, par un pharmacien.',
         steps: ['Décrivez votre peau, photos à l’appui.', 'Recevez une routine matin, soir et semaine.', 'Ajoutez-la au panier en un geste.'],
         cta: 'Demander ma routine',
+        quiz: 'Faire le test de peau (1 min)',
         card: {
           label: "Exemple de réponse dans l'application : une routine matin, soir et chaque semaine",
           title: 'Votre routine personnalisée', by: 'Réponse de votre pharmacienne', initial: 'S',
@@ -109,7 +121,7 @@ function fr(h, free) {
       points: (n) => `+${n} points fidélité`,
       sections: ['Description', "Mode d'emploi", 'Ingrédients'],
       related: (b) => `Aussi chez ${b}`, others: (k) => `D'autres ${k.toLowerCase()}`,
-      auMl: 'Disponible au ml', peau: (t) => `Peau ${t.toLowerCase()}`, unit: (u) => u || 'ml',
+      auMl: 'Disponible au ml', unit: (u) => u || 'ml',
       metaFallback: "Produit d'origine, choisi par des pharmaciens. Commandez-le dans l'application Bellea : livraison dans toutes les wilayas, paiement à la livraison.",
     },
 
@@ -142,6 +154,21 @@ function fr(h, free) {
         ],
         callout: "Le catalogue complet et la commande sont dans l'application.",
       },
+      quiz: {
+        title: 'Test : quel est mon type de peau ? | Bellea',
+        desc: 'Découvrez votre type de peau en 8 questions et 1 minute, avec les soins adaptés choisis par des pharmaciens.',
+        h1: 'Quel est mon type de peau ?',
+        sub: '8 questions, 1 minute. Les mêmes que dans l’app Bellea.',
+        progress: 'Question {i} sur {n}', back: 'Retour', restart: 'Refaire le test',
+        resultH: 'Votre type de peau',
+        sensitive: 'Tendance sensible : préférez des soins sans parfum et testez chaque nouveau produit sur une petite zone.',
+        productsH: 'Des soins adaptés',
+        ctaH: 'Recevez votre routine complète',
+        ctaP: 'Un pharmacien la compose pour votre peau : matin, soir et chaque semaine. Gratuit dans l’app Bellea.',
+        ctaBtn: 'Recevoir ma routine dans l’app',
+        note: 'Résultat indicatif : le pharmacien l’affine avec vos photos dans l’application.',
+        noscript: 'Activez JavaScript pour faire le test, ou faites-le directement dans l’application Bellea.',
+      },
       faq: { title: 'Questions fréquentes | Bellea', desc: "Commande, authenticité, livraison, paiement, satisfait ou remboursé, conseils de pharmaciens : les réponses sur l'application Bellea.", h1: 'Questions fréquentes', sub: "L'essentiel en quelques lignes.", callout: "Une autre question ? Posez-la à un pharmacien dans l'application." },
       notFound: { title: 'Page introuvable | Bellea', h1: "Cette page n'existe pas ou plus.", p: 'Le produit a peut-être été retiré du catalogue.', btn: 'Voir le catalogue' },
     },
@@ -155,14 +182,14 @@ function ar(h, free) {
   return {
     lang: 'ar', dir: 'rtl', ogLocale: 'ar_DZ', otherLang: 'Français', otherLangCode: 'fr',
     skip: 'انتقل إلى المحتوى', menuOpen: 'فتح القائمة', menuClose: 'إغلاق القائمة', home: 'Bellea، الصفحة الرئيسية',
-    nav: [['/produits/', 'الكتالوج'], ['/pharmaciens/', 'الصيادلة'], ['/livraison/', 'التوصيل'], ['/faq/', 'الأسئلة']],
+    nav: [['/produits/', 'الكتالوج'], ['/test-peau/', 'اختبار البشرة'], ['/pharmaciens/', 'الصيادلة'], ['/livraison/', 'التوصيل']],
     ctaHeader: 'حمّل التطبيق',
     sticky: { title: 'Bellea', sub: 'مجاني على Google Play', btn: 'تثبيت' },
 
     footer: {
       tagline: 'مستحضرات تجميل جلدية وعطور أصلية يختارها صيادلة. اطلب من التطبيق.',
       site: 'الموقع', app: 'التطبيق',
-      links: [['/produits/', 'كتالوج العناية'], ['/produits/?type=parfum', 'كتالوج العطور'], ['/pharmaciens/', 'الصيادلة'], ['/livraison/', 'التوصيل والدفع'], ['/faq/', 'الأسئلة الشائعة']],
+      links: [['/produits/', 'كتالوج العناية'], ['/produits/?type=parfum', 'كتالوج العطور'], ['/test-peau/', 'اختبار نوع البشرة'], ['/pharmaciens/', 'الصيادلة'], ['/livraison/', 'التوصيل والدفع'], ['/faq/', 'الأسئلة الشائعة']],
       play: 'Bellea على Google Play', cgu: 'الشروط وسياسة الخصوصية', del: 'حذف حسابي',
       bottom: 'تطبيق أندرويد، متجر إلكتروني 100%',
     },
@@ -174,9 +201,20 @@ function ar(h, free) {
       lead: 'منتجات أصلية من أوروبا. توصيل إلى جميع الولايات والدفع عند الاستلام.',
       cta: 'حمّل التطبيق', ctaAlt: 'شاهد المنتجات', note: 'مجاني على أندرويد',
       chips: ['منتجات أصلية', 'راضٍ أو نُرجع أموالك', 'الدفع عند الاستلام'],
+      promo: { h: 'تخفيضات', sub: 'عروض الوقت الحالي في التطبيق' },
       soins: { h: 'منتجات العناية بالبشرة', link: 'عرض الكل' },
       parfums: { h: 'العطور', sub: 'قارورة كاملة أو بالمليلتر', link: 'عرض الكل' },
       prev: 'السابق', next: 'التالي',
+      app: {
+        h: 'كل شيء يتم في التطبيق.',
+        sub: 'الكتالوج والنصيحة والطلب والوفاء، في مكان واحد.',
+        shots: [
+          ['ecran-boutique', 'تصفية حسب الهدف ونوع البشرة', 'شاشة المتجر في التطبيق: تصفية حسب العلامة والهدف ونوع البشرة'],
+          ['ecran-fiche-soin', 'طريقة الاستعمال والمخزون ونقاط الوفاء', 'صفحة منتج عناية في التطبيق'],
+          ['ecran-parfums', 'العطور حسب العلامة والنوع', 'شاشة العطور في التطبيق'],
+          ['ecran-fiche-parfum', 'قارورة كاملة أو بالمليلتر', 'صفحة عطر في التطبيق، شراء كامل أو بالمليلتر'],
+        ],
+      },
       origin: {
         h: 'منتجات أصلية ومضمونة.',
         items: [
@@ -190,6 +228,7 @@ function ar(h, free) {
         h: 'روتينك، من صيدلي.',
         steps: ['صِف بشرتك وأرفق صورًا.', 'استلم روتينًا للصباح والمساء وكل أسبوع.', 'أضفه إلى السلة بلمسة واحدة.'],
         cta: 'اطلب روتيني',
+        quiz: 'قم باختبار البشرة (دقيقة واحدة)',
         card: {
           label: 'مثال على رد في التطبيق: روتين للصباح والمساء وكل أسبوع',
           title: 'روتينك الشخصي', by: 'رد الصيدلانية', initial: 'س',
@@ -248,7 +287,7 @@ function ar(h, free) {
       points: (n) => `+${n} نقطة وفاء`,
       sections: ['الوصف', 'طريقة الاستعمال', 'المكونات'],
       related: (b) => `أيضًا من ${b}`, others: () => 'منتجات أخرى',
-      auMl: 'متوفر بالمليلتر', peau: (t) => `بشرة ${t}`, unit: (u) => (!u || u === 'ml' ? 'مل' : u),
+      auMl: 'متوفر بالمليلتر', unit: (u) => (!u || u === 'ml' ? 'مل' : u),
       metaFallback: 'منتج أصلي يختاره صيادلة. اطلبه من تطبيق Bellea: توصيل إلى جميع الولايات والدفع عند الاستلام.',
     },
 
@@ -280,6 +319,21 @@ function ar(h, free) {
           ['متابعة الطلب', ['قسم «طلباتي» في التطبيق يبيّن حالة كل طلب.']],
         ],
         callout: 'الكتالوج الكامل والطلب في التطبيق.',
+      },
+      quiz: {
+        title: 'اختبار: ما هو نوع بشرتي؟ | Bellea',
+        desc: 'اكتشف نوع بشرتك في 8 أسئلة ودقيقة واحدة، مع منتجات العناية المناسبة التي يختارها صيادلة.',
+        h1: 'ما هو نوع بشرتي؟',
+        sub: '8 أسئلة، دقيقة واحدة. نفس أسئلة تطبيق Bellea.',
+        progress: 'السؤال {i} من {n}', back: 'رجوع', restart: 'أعد الاختبار',
+        resultH: 'نوع بشرتك',
+        sensitive: 'ميل إلى الحساسية: اختر منتجات بدون عطر وجرّب كل منتج جديد على منطقة صغيرة.',
+        productsH: 'منتجات عناية مناسبة',
+        ctaH: 'استلم روتينك الكامل',
+        ctaP: 'يعدّه لك صيدلي حسب بشرتك: الصباح والمساء وكل أسبوع. مجانًا في تطبيق Bellea.',
+        ctaBtn: 'استلم روتيني في التطبيق',
+        note: 'نتيجة تقريبية: يدقّقها الصيدلي بصورك في التطبيق.',
+        noscript: 'فعّل JavaScript لإجراء الاختبار، أو قم به مباشرة في تطبيق Bellea.',
       },
       faq: { title: 'الأسئلة الشائعة | Bellea', desc: 'الطلب، أصالة المنتجات، التوصيل، الدفع، استرجاع المال، نصائح الصيادلة: كل الأجوبة حول تطبيق Bellea.', h1: 'الأسئلة الشائعة', sub: 'الأهم في بضعة أسطر.', callout: 'سؤال آخر؟ اطرحه على صيدلي في التطبيق.' },
       notFound: { title: 'الصفحة غير موجودة | Bellea', h1: 'هذه الصفحة غير موجودة.', p: 'ربما سُحب المنتج من الكتالوج.', btn: 'عرض الكتالوج' },

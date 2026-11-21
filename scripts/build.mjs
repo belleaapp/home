@@ -266,6 +266,31 @@ ${appbar ? `<div class="appbar" id="appbar" aria-hidden="true">
 // ---------------------------------------------------------------------------
 // Composants
 // ---------------------------------------------------------------------------
+// Captures de l'app. Le haut de l'accueil en montre deux (ordinateur et
+// tablette) ; la section « Tout se passe dans l'app » ne les répète pas sur
+// ces écrans (classe `in-hero`, masquée par le CSS dès 701 px). Sur téléphone
+// le haut n'a pas de capture : la section les montre toutes.
+const HERO_SHOTS = ['ecran-parfums', 'ecran-fiche-soin'];
+
+/** Arrête la construction si une capture est en double ou absente. */
+function checkShots() {
+  const problems = [];
+  for (const lang of LANGS) {
+    const names = T[lang].home.app.shots.map(([img]) => img);
+    const dup = names.filter((n, i) => names.indexOf(n) !== i);
+    if (dup.length) problems.push(`[${lang}] capture en double dans la section de l'app : ${[...new Set(dup)].join(', ')}`);
+    if (new Set(HERO_SHOTS).size !== HERO_SHOTS.length) problems.push('capture en double en haut de l\'accueil');
+    const shown = names.filter((n) => !HERO_SHOTS.includes(n));
+    if (shown.length < 2) problems.push(`[${lang}] moins de 2 captures restent visibles sur ordinateur sous le haut de page`);
+    for (const n of [...names, ...HERO_SHOTS]) {
+      for (const size of [360, 720]) {
+        if (!existsSync(path.join(ROOT, 'src/img', `${n}-${size}.webp`))) problems.push(`image manquante : src/img/${n}-${size}.webp`);
+      }
+    }
+  }
+  if (problems.length) throw new Error(`Captures de l'app :\n- ${[...new Set(problems)].join('\n- ')}`);
+}
+
 const phone = (name, alt, cls = '', eager = false) => `<div class="phone ${cls}">
   <img src="/assets/img/${name}-360.webp" srcset="/assets/img/${name}-360.webp 360w, /assets/img/${name}-720.webp 720w" sizes="(max-width: 600px) 50vw, 300px" alt="${esc(alt)}" width="360" height="702"${eager ? ' fetchpriority="high"' : ' loading="lazy"'}>
 </div>`;
@@ -388,8 +413,8 @@ function home(lang, products, qrSvg) {
     </div>
     <div class="hero-visual">
       <div class="arch"></div>
-      ${phone('ecran-parfums', H.phonesAlt[0], 'phone-back', true)}
-      ${phone('ecran-fiche-soin', H.phonesAlt[1], 'phone-front', true)}
+      ${phone(HERO_SHOTS[0], H.phonesAlt[0], 'phone-back', true)}
+      ${phone(HERO_SHOTS[1], H.phonesAlt[1], 'phone-front', true)}
     </div>
   </div>
 </section>
@@ -408,7 +433,7 @@ function home(lang, products, qrSvg) {
       <div><h2>${H.app.h}</h2><p class="section-lead">${H.app.sub}</p></div>
     </div>
     <ul class="shots" role="list">
-      ${H.app.shots.map(([img, cap, alt]) => `<li><figure>${phone(img, alt)}<figcaption>${cap}</figcaption></figure></li>`).join('\n      ')}
+      ${H.app.shots.map(([img, cap, alt]) => `<li${HERO_SHOTS.includes(img) ? ' class="in-hero"' : ''}><figure>${phone(img, alt)}<figcaption>${cap}</figcaption></figure></li>`).join('\n      ')}
     </ul>
     <div class="shots-cta">${playButton(lang, 'captures', H.cta, 'btn-primary btn-lg')}</div>
   </div>
@@ -769,6 +794,7 @@ async function main() {
   const products = (await loadProducts())
     .map((p) => ({ ...p, nom: p.nom.replace(/ %/g, '\u00a0%') })) // « 7 % » ne se coupe jamais en fin de ligne
     .sort((a, b) => a.marque.localeCompare(b.marque, 'fr') || a.nom.localeCompare(b.nom, 'fr'));
+  checkShots();
   if (existsSync(DIST)) await rm(DIST, { recursive: true });
   await mkdir(DIST, { recursive: true });
   await cp(path.join(ROOT, 'src/img'), path.join(DIST, 'assets/img'), { recursive: true });

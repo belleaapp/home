@@ -464,7 +464,9 @@ p { margin: 0; text-wrap: pretty; }
 .shots figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 16px; }
 .shots .phone { width: 100%; max-width: 250px; }
 .shots figcaption { font-weight: 600; text-align: center; font-size: .9375rem; max-width: 24ch; }
-@media (min-width: 900px) { .shots { grid-auto-flow: row; grid-template-columns: repeat(4, minmax(0, 1fr)); overflow: visible; margin-inline: 0; padding-inline: 0; } }
+/* Captures déjà montrées en haut de l'accueil (visible dès 701 px) : pas de doublon. */
+@media (min-width: 701px) { .shots li.in-hero { display: none; } }
+@media (min-width: 900px) { .shots { grid-auto-flow: row; grid-template-columns: repeat(auto-fit, minmax(0, 260px)); justify-content: center; column-gap: clamp(32px, 6vw, 96px); overflow: visible; margin-inline: 0; padding-inline: 0; } }
 .shots-cta { margin-top: 28px; display: flex; justify-content: center; }
 @media (max-width: 520px) { .shots-cta .btn { width: 100%; } }
 

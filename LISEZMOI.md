@@ -14,6 +14,7 @@ l'application sur Google Play.
 | `/pharmaciens/` | Dr. Soumia et Dr. Fodil |
 | `/livraison/` | Livraison et paiement |
 | `/faq/` | Questions fréquentes |
+| `/ar/…` | Les mêmes pages en arabe (de droite à gauche) |
 
 Les fiches produit sont générées à partir de Firebase **au moment de la
 construction**. Les visiteurs ne déclenchent donc aucune lecture Firestore.
@@ -76,7 +77,8 @@ Rien n'est cassé.
 
 ## Fichiers
 
-- `scripts/build.mjs` : toutes les pages (mise en page commune, textes, FAQ, réglages).
+- `scripts/textes.mjs` : **tous les textes du site, en français et en arabe**. Pour changer une phrase, modifiez-la ici dans les deux langues.
+- `scripts/build.mjs` : génération des pages (mise en page commune, carrousels, fiches produit, réglages).
 - `src/site.css`, `src/site.js` : styles et comportements.
 - `src/img`, `src/fonts` : images, logos, polices PT Serif et Inter (hébergées sur le site).
 - `firebase.json` : configuration de l'hébergement.

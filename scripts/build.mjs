@@ -13,6 +13,7 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import QRCode from 'qrcode';
+import { LANGS, textes } from './textes.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(ROOT, 'dist');
@@ -44,7 +45,8 @@ const play = (medium) =>
 // Outils
 // ---------------------------------------------------------------------------
 const esc = (s = '') => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const da = (n) => `${Math.round(n).toLocaleString('fr-FR').replace(/ | /g, ' ')} DA`;
+const fmtNum = (n) => Math.round(n).toLocaleString('fr-FR').replace(/[\u202f\u00a0 ]/g, '\u202f');
+const daFor = (lang) => (n) => `${fmtNum(n)}\u00a0${lang === 'ar' ? 'دج' : 'DA'}`;
 const norm = (s = '') => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const clip = (s = '', n = 155) => (s.length > n ? s.slice(0, n - 1).replace(/\s+\S*$/, '') + '…' : s);
 const fullName = (p) => (norm(p.nom).startsWith(norm(p.marque)) ? p.nom : `${p.marque} ${p.nom}`.trim());
@@ -52,6 +54,11 @@ const FALLBACK_IMG = '/assets/img/bellea_pipette_b.svg';
 const productPath = (p) => `/${p.type === 'parfum' ? 'parfum' : 'produit'}/${encodeURIComponent(p.id)}/`;
 
 const icon = {
+  pharmacist: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="7.5" r="3.5"/><path d="M5 20.5c.6-3.6 3.4-6 7-6s6.4 2.4 7 6"/><path d="M12 15.5v3M10.5 17h3"/></svg>',
+  globe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.4 3.6 5.2 3.6 8.5s-1.2 6.1-3.6 8.5c-2.4-2.4-3.6-5.2-3.6-8.5S9.6 5.9 12 3.5Z"/></svg>',
+  shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.6 3.1 8 7.5 9.5 4.4-1.5 7.5-4.9 7.5-9.5V6L12 3Z"/><path d="m8.8 12 2.2 2.2 4.3-4.4"/></svg>',
+  refund: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/><path d="M12 8v8M14.2 9.6c-.4-.7-1.2-1.1-2.2-1.1-1.3 0-2.2.7-2.2 1.7 0 2.3 4.6 1.2 4.6 3.6 0 1-1 1.8-2.4 1.8-1.1 0-2-.5-2.4-1.3"/></svg>',
+  chevron: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>',
   download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-4.5-4.5M12 15l4.5-4.5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>',
   chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12.5a7.5 7.5 0 0 1-11.2 6.5L4 20l1.1-4.3A7.5 7.5 0 1 1 20 12.5Z"/><path d="M9 11h6M9 14h4"/></svg>',
   truck: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h11v10H3zM14 9h4l3 3.5V16h-7"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/></svg>',
@@ -143,58 +150,70 @@ function value(v) {
   return null;
 }
 
+
+// ---------------------------------------------------------------------------
+// Langues et adresses
+// ---------------------------------------------------------------------------
+// Français à la racine, arabe sous /ar/ : /produits/ ↔ /ar/produits/
+const loc = (lang, p) => (lang === 'ar' ? `/ar${p}` : p);
+const T = Object.fromEntries(LANGS.map((l) => [l, textes(l, { da: daFor(l), freeShipping: SITE.freeShipping })]));
+
+/** Lien Google Play avec la langue et la position du bouton (Play Console > Acquisition). */
+const playL = (lang, medium) => play(`${lang}-${medium}`);
+
 // ---------------------------------------------------------------------------
 // Mise en page commune
 // ---------------------------------------------------------------------------
-const NAV = [
-  ['/produits/', 'Catalogue'],
-  ['/pharmaciens/', 'Les pharmaciens'],
-  ['/livraison/', 'Livraison'],
-  ['/faq/', 'Questions'],
-];
-
-function layout({ title, description, path: pagePath, body, current, image = '/assets/img/og.png', jsonld = '', bodyClass = '' }) {
-  const canonical = SITE.url + pagePath;
+function layout({ lang, title, description, path: pagePath, body, current, image = '/assets/img/og.png', jsonld = '', bodyClass = '', appbar = true, alt = true }) {
+  const t = T[lang];
+  const other = t.otherLangCode;
+  const canonical = SITE.url + loc(lang, pagePath);
   const ogImage = image.startsWith('http') ? image : SITE.url + image;
+  const classes = [bodyClass, appbar ? 'has-appbar' : ''].filter(Boolean).join(' ');
+  const navLinks = t.nav.map(([href, label]) => `<a href="${loc(lang, href)}"${current === href ? ' aria-current="page"' : ''}>${label}</a>`).join('\n      ');
+  const langLink = alt ? `<a class="lang-switch" href="${loc(other, pagePath)}" hreflang="${other}" lang="${other}">${t.otherLang}</a>` : '';
   return `<!doctype html>
-<html lang="fr">
+<html lang="${lang}" dir="${t.dir}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
 <link rel="canonical" href="${canonical}">
+${alt ? LANGS.map((l) => `<link rel="alternate" hreflang="${l}" href="${SITE.url + loc(l, pagePath)}">`).join('\n') + `\n<link rel="alternate" hreflang="x-default" href="${SITE.url + pagePath}">` : ''}
 <meta name="theme-color" content="#ffffff">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Bellea">
-<meta property="og:locale" content="fr_DZ">
+<meta property="og:locale" content="${t.ogLocale}">
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(description)}">
 <meta property="og:url" content="${canonical}">
 <meta property="og:image" content="${esc(ogImage)}">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="google-play-app" content="app-id=${SITE.package}">
 <link rel="icon" href="/assets/img/favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="/assets/img/favicon.png">
-<link rel="preload" href="/assets/fonts/pt-serif-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="/assets/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+${lang === 'ar'
+    ? '<link rel="preload" href="/assets/fonts/ibm-plex-sans-arabic-arabic-700-normal.woff2" as="font" type="font/woff2" crossorigin>\n<link rel="preload" href="/assets/fonts/ibm-plex-sans-arabic-arabic-400-normal.woff2" as="font" type="font/woff2" crossorigin>'
+    : '<link rel="preload" href="/assets/fonts/pt-serif-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>\n<link rel="preload" href="/assets/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>'}
 <link rel="stylesheet" href="/assets/site.css">
 ${jsonld}
 </head>
-<body${bodyClass ? ` class="${bodyClass}"` : ''}>
-<a class="skip" href="#contenu">Aller au contenu</a>
+<body${classes ? ` class="${classes}"` : ''}>
+<a class="skip" href="#contenu">${t.skip}</a>
 <header class="site-header">
   <div class="wrap">
-    <a class="brand" href="/" aria-label="Bellea, accueil">
+    <a class="brand" href="${loc(lang, '/')}" aria-label="${esc(t.home)}">
       <img class="pipette" src="/assets/img/bellea_pipette_b.svg" alt="" width="16" height="34">
       <img class="wordmark" src="/assets/img/wordmark.png" alt="Bellea" width="99" height="17">
     </a>
-    <nav class="nav" id="nav" aria-label="Navigation principale">
-      ${NAV.map(([href, label]) => `<a href="${href}"${current === href ? ' aria-current="page"' : ''}>${label}</a>`).join('\n      ')}
-      <a class="btn btn-primary nav-cta" href="${play('menu')}">${icon.download}Télécharger l'app</a>
+    <nav class="nav" id="nav" aria-label="${lang === 'ar' ? 'القائمة الرئيسية' : 'Navigation principale'}">
+      ${navLinks}
+      ${langLink ? langLink.replace('class="lang-switch"', 'class="lang-switch nav-lang"') : ''}
+      <a class="btn btn-primary nav-cta" href="${playL(lang, 'menu')}">${icon.download}${t.ctaHeader}</a>
     </nav>
-    <a class="btn btn-primary btn-small header-cta" href="${play('entete')}">Télécharger l'app</a>
-    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="nav" aria-label="Ouvrir le menu">${icon.menu}${icon.close}</button>
+    ${langLink}
+    <a class="btn btn-primary btn-small header-cta" href="${playL(lang, 'entete')}">${t.ctaHeader}</a>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="nav" aria-label="${t.menuOpen}" data-open="${t.menuOpen}" data-close="${t.menuClose}">${icon.menu}${icon.close}</button>
   </div>
 </header>
 <main id="contenu">
@@ -204,38 +223,39 @@ ${body}
   <div class="wrap">
     <div class="footer-grid">
       <div>
-        <a class="brand" href="/" aria-label="Bellea, accueil">
+        <a class="brand" href="${loc(lang, '/')}" aria-label="${esc(t.home)}">
           <img class="pipette" src="/assets/img/bellea_pipette_b.svg" alt="" width="16" height="34">
           <img class="wordmark" src="/assets/img/wordmark.png" alt="Bellea" width="99" height="17">
         </a>
-        <p>Dermo-cosmétique et parfums, choisis avec des pharmaciens. Commandez dans l'application, livraison dans toutes les wilayas.</p>
+        <p>${t.footer.tagline}</p>
       </div>
       <div>
-        <h2>Le site</h2>
+        <h2>${t.footer.site}</h2>
         <ul>
-          <li><a href="/produits/">Catalogue des soins</a></li>
-          <li><a href="/produits/?type=parfum">Catalogue des parfums</a></li>
-          <li><a href="/pharmaciens/">Les pharmaciens</a></li>
-          <li><a href="/livraison/">Livraison et paiement</a></li>
-          <li><a href="/faq/">Questions fréquentes</a></li>
+          ${t.footer.links.map(([href, label]) => `<li><a href="${loc(lang, href)}">${label}</a></li>`).join('\n          ')}
         </ul>
       </div>
       <div>
-        <h2>L'application</h2>
+        <h2>${t.footer.app}</h2>
         <ul>
-          <li><a href="${play('pied-de-page')}">Bellea sur Google Play</a></li>
-          <li><a href="${SITE.cgu}" rel="noopener">CGU et confidentialité</a></li>
-          <li><a href="${SITE.deleteAccount}" rel="noopener">Supprimer mon compte</a></li>
+          <li><a href="${playL(lang, 'pied-de-page')}">${t.footer.play}</a></li>
+          <li><a href="${SITE.cgu}" rel="noopener">${t.footer.cgu}</a></li>
+          <li><a href="${SITE.deleteAccount}" rel="noopener">${t.footer.del}</a></li>
           <!-- Contacts : ajouter ici WhatsApp, Instagram, Facebook, TikTok et l'e-mail quand ils seront prêts. -->
         </ul>
       </div>
     </div>
     <div class="footer-bottom">
       <span>© ${SITE.year} Bellea</span>
-      <span>Application Android, boutique 100 % en ligne</span>
+      <span>${t.footer.bottom}</span>
     </div>
   </div>
 </footer>
+${appbar ? `<div class="appbar" id="appbar" aria-hidden="true">
+  <img src="/assets/img/favicon.png" alt="" width="40" height="40">
+  <div><strong>${t.sticky.title}</strong><span>${t.sticky.sub}</span></div>
+  <a class="btn btn-primary" href="${playL(lang, 'barre-mobile')}" tabindex="-1">${t.sticky.btn}</a>
+</div>` : ''}
 <script src="/assets/site.js" defer></script>
 </body>
 </html>
@@ -249,37 +269,59 @@ const phone = (name, alt, cls = '', eager = false) => `<div class="phone ${cls}"
   <img src="/assets/img/${name}-360.webp" srcset="/assets/img/${name}-360.webp 360w, /assets/img/${name}-720.webp 720w" sizes="(max-width: 600px) 50vw, 300px" alt="${esc(alt)}" width="360" height="702"${eager ? ' fetchpriority="high"' : ' loading="lazy"'}>
 </div>`;
 
-const playButton = (medium, label = 'Télécharger sur Google Play', cls = 'btn-primary') =>
-  `<a class="btn ${cls}" href="${play(medium)}">${icon.download}${label}</a>`;
+const playButton = (lang, medium, label, cls = 'btn-primary', extra = '') =>
+  `<a class="btn ${cls}" href="${playL(lang, medium)}"${extra}>${icon.download}${label}</a>`;
 
 function subtitle(p) {
   if (p.type === 'parfum') return [p.version, p.pourQui].filter(Boolean).join(', ');
   return p.effet || '';
 }
 
-function card(p) {
+function card(p, lang, eager = false) {
+  const da = daFor(lang);
   const search = norm([p.nom, p.marque, p.effet, p.version, p.pourQui].filter(Boolean).join(' '));
-  return `<a class="card" href="${productPath(p)}" data-type="${p.type}" data-brand="${esc(p.marque)}" data-search="${esc(search)}">
-  <div class="card-img"><img src="${esc(p.image)}" alt="${esc(fullName(p))}" loading="lazy" width="300" height="300"></div>
+  const promo = p.ancienPrix > p.prix;
+  return `<a class="card" href="${loc(lang, productPath(p))}" data-type="${p.type}" data-brand="${esc(p.marque)}" data-search="${esc(search)}">
+  <div class="card-img">${promo ? `<span class="card-flag">−${Math.round((1 - p.prix / p.ancienPrix) * 100)}%</span>` : ''}<img src="${esc(p.image)}" alt="${esc(fullName(p))}"${eager ? '' : ' loading="lazy"'} width="300" height="300"></div>
   <div class="card-body">
-    <span class="card-brand">${esc(p.marque)}</span>
-    <span class="card-name">${esc(p.nom)}</span>
-    ${subtitle(p) ? `<span class="card-sub">${esc(subtitle(p))}</span>` : ''}
-    <span class="card-price">${da(p.prix)}${p.ancienPrix > p.prix ? ` <s>${da(p.ancienPrix)}</s>` : ''}</span>
+    <span class="card-brand" dir="auto">${esc(p.marque)}</span>
+    <span class="card-name" dir="auto">${esc(p.nom)}</span>
+    ${subtitle(p) ? `<span class="card-sub" dir="auto">${esc(subtitle(p))}</span>` : ''}
+    <span class="card-price">${da(p.prix)}${promo ? ` <s>${da(p.ancienPrix)}</s>` : ''}</span>
   </div>
 </a>`;
 }
 
-const FAQ = [
-  ['Peut-on commander sur le site ?', "Non. Le site présente le catalogue. Les commandes se font dans l'application Bellea, gratuite sur Google Play."],
-  ['Comment se passe la livraison ?', `Bellea livre dans toutes les wilayas d'Algérie, à domicile ou au bureau de la société de livraison. Nous travaillons avec plusieurs sociétés : les frais dépendent de votre wilaya et de la société choisie, et s'affichent avant de valider la commande. La livraison est offerte dès ${da(SITE.freeShipping)} d'achat.`],
-  ['Comment je paie ?', 'À la livraison : vous payez le livreur quand vous recevez votre colis.'],
-  ['Qui répond à mes questions sur ma peau ?', "Dr. Soumia et Dr. Fodil, pharmaciens. Dans l'onglet Conseils de l'application, vous décrivez votre peau, ajoutez des photos si vous le souhaitez, et recevez une réponse avec une routine adaptée."],
-  ['Peut-on acheter un parfum au millilitre ?', "Oui, pour les parfums qui le proposent. Sur la fiche du parfum dans l'app, choisissez « Achat au ml » au lieu de « Produit entier » : pratique pour essayer avant d'acheter le flacon."],
-  ['Comment marchent les points fidélité ?', "Chaque produit affiche les points qu'il rapporte. Ils sont ajoutés à votre compte à la livraison, et vous les échangez contre des produits dans la Boutique fidélité de l'app."],
-  ["L'application existe-t-elle sur iPhone ?", "Pas encore. Bellea est disponible sur Android, via Google Play."],
-  ['Avez-vous une boutique physique ?', "Pas pour le moment. Bellea est une boutique 100 % en ligne : tout se passe dans l'application."],
-];
+/** Sélection variée pour les carrousels : promos d'abord, puis une marque après l'autre. */
+function pickRail(list, n = 12) {
+  const byBrand = new Map();
+  for (const p of [...list].sort((a, b) => (b.ancienPrix > b.prix) - (a.ancienPrix > a.prix))) {
+    if (!byBrand.has(p.marque)) byBrand.set(p.marque, []);
+    byBrand.get(p.marque).push(p);
+  }
+  const out = [];
+  const queues = [...byBrand.values()];
+  while (out.length < n && queues.some((q) => q.length)) for (const q of queues) if (q.length && out.length < n) out.push(q.shift());
+  return out;
+}
+
+function rail({ lang, id, h, sub = '', link, items, eager = false }) {
+  const t = T[lang].home;
+  if (!items.length) return '';
+  return `<div class="rail-block" id="${id}">
+  <div class="rail-head">
+    <div><h2>${h}</h2>${sub ? `<p>${sub}</p>` : ''}</div>
+    <a class="link-more" href="${link}">${T[lang].home.soins.link}${icon.chevron}</a>
+  </div>
+  <div class="rail-wrap">
+    <button class="rail-btn prev" type="button" aria-label="${t.prev}" data-dir="-1">${icon.chevron}</button>
+    <ul class="rail" role="list">
+      ${items.map((p, i) => `<li>${card(p, lang, eager && i < 3)}</li>`).join('\n      ')}
+    </ul>
+    <button class="rail-btn next" type="button" aria-label="${t.next}" data-dir="1">${icon.chevron}</button>
+  </div>
+</div>`;
+}
 
 const faqHtml = (items) => `<div class="faq">
 ${items.map(([q, a]) => `  <details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('\n')}
@@ -290,151 +332,123 @@ const faqJsonLd = (items) => `<script type="application/ld+json">${JSON.stringif
   mainEntity: items.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })),
 })}</script>`;
 
+function portrait(m) {
+  return `<div class="portrait"><!-- Photo : remplacer par <img src="/assets/img/dr-….webp" alt="${esc(m.name)}"> --><span aria-hidden="true">${m.initial}</span></div>`;
+}
+
+function teamFull(lang) {
+  return `<div class="team">
+    ${T[lang].team.map((m) => `<article class="member">
+      ${portrait(m)}
+      <div>
+        <h3>${m.name}</h3>
+        <p class="role">${m.role}</p>
+        <p class="bio">${m.bio}</p>
+      </div>
+    </article>`).join('\n    ')}
+  </div>`;
+}
+
+const originIcons = [icon.pharmacist, icon.globe, icon.shield, icon.refund];
+
 // ---------------------------------------------------------------------------
 // Pages
 // ---------------------------------------------------------------------------
-function home(products, qrSvg) {
-  const pick = [...products.filter((p) => p.type === 'soin').slice(0, 2), ...products.filter((p) => p.type === 'parfum').slice(0, 2)];
-  const selection = (pick.length >= 4 ? pick : products.slice(0, 4));
+function home(lang, products, qrSvg) {
+  const t = T[lang];
+  const H = t.home;
+  const soins = pickRail(products.filter((p) => p.type === 'soin'));
+  const parfums = pickRail(products.filter((p) => p.type === 'parfum'));
   const appJsonLd = `<script type="application/ld+json">${JSON.stringify({
     '@context': 'https://schema.org', '@type': 'MobileApplication', name: 'Bellea',
     operatingSystem: 'Android', applicationCategory: 'ShoppingApplication',
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'DZD' },
     downloadUrl: `https://play.google.com/store/apps/details?id=${SITE.package}`,
   })}</script>`;
+  const faqItems = t.faqHome.map((i) => t.faq[i]);
+  const c = H.conseil.card;
+  const steps = (arr) => `<ol>${arr.map(([s, note], i) => `<li><b>${i + 1}</b>${s}${note ? `<em>${note}</em>` : ''}</li>`).join('')}</ol>`;
 
   const body = `
 <section class="hero">
-  <div class="wrap">
-    <div class="hero-grid">
-      <div class="enter">
-        <h1>Vos soins et parfums, choisis avec un pharmacien.</h1>
-        <p class="hero-lead">Bellea est l'application de Dr. Soumia et Dr. Fodil, pharmaciens. Posez votre question, recevez une routine pour votre peau et commandez au même endroit.</p>
-        <div class="hero-actions">
-          ${playButton('hero')}
-          <a class="link" href="/produits/">Voir le catalogue</a>
-        </div>
-        <p class="hero-note">Gratuit, pour Android.</p>
+  <div class="wrap hero-grid">
+    <div class="enter">
+      <h1>${H.h1}</h1>
+      <p class="hero-lead">${H.lead}</p>
+      <div class="hero-actions">
+        ${playButton(lang, 'hero', H.cta, 'btn-primary btn-lg', ' data-hero-cta')}
+        <a class="link" href="#produits">${H.ctaAlt}</a>
       </div>
-      <div class="hero-visual">
-        <div class="arch"></div>
-        ${phone('ecran-parfums', "Écran Parfums de l'application Bellea", 'phone-back', true)}
-        ${phone('ecran-fiche-soin', "Fiche produit dans l'application : The Ordinary Acide Glycolique 7 %", 'phone-front', true)}
-      </div>
+      <p class="hero-note">${H.note}</p>
+      <ul class="chips" role="list">
+        ${H.chips.map((ch) => `<li>${icon.check}${ch}</li>`).join('\n        ')}
+      </ul>
     </div>
-    <ul class="facts" role="list">
-      <li class="fact">${icon.chat}<div><strong>Réponse d'un pharmacien</strong><span>Questions et consultation dans l'app</span></div></li>
-      <li class="fact">${icon.truck}<div><strong>Toutes les wilayas</strong><span>À domicile ou au bureau de livraison</span></div></li>
-      <li class="fact">${icon.cash}<div><strong>Paiement à la livraison</strong><span>Vous payez à la réception du colis</span></div></li>
-      <li class="fact">${icon.star}<div><strong>Points fidélité</strong><span>À chaque commande, à échanger contre des produits</span></div></li>
+    <div class="hero-visual">
+      <div class="arch"></div>
+      ${phone('ecran-parfums', H.phonesAlt[0], 'phone-back', true)}
+      ${phone('ecran-fiche-soin', H.phonesAlt[1], 'phone-front', true)}
+    </div>
+  </div>
+</section>
+
+<section class="rails" id="produits">
+  <div class="wrap">
+    ${rail({ lang, id: 'soins', h: H.soins.h, link: loc(lang, '/produits/'), items: soins, eager: true })}
+    ${rail({ lang, id: 'parfums', h: H.parfums.h, sub: H.parfums.sub, link: loc(lang, '/produits/?type=parfum'), items: parfums })}
+  </div>
+</section>
+
+<section class="section section-cream" id="origine">
+  <div class="wrap">
+    <h2>${H.origin.h}</h2>
+    <ul class="g-grid" role="list">
+      ${H.origin.items.map(([ti, d], i) => `<li>${originIcons[i]}<strong>${ti}</strong><span>${d}</span></li>`).join('\n      ')}
     </ul>
   </div>
 </section>
 
-<section class="section section-cream" id="conseil">
+<section class="section" id="conseil">
   <div class="wrap split">
     <div>
-      <h2>Décrivez votre peau. Recevez votre routine.</h2>
-      <p class="section-lead">La consultation se fait dans l'onglet Conseils de l'application. Un pharmacien lit votre demande, regarde vos photos et vous répond.</p>
-      <ol class="steps">
-        <li><strong>Vous décrivez votre peau en 7 étapes</strong><span>Préoccupations, zones du visage, routine actuelle, allergies. Photos guidées si vous le souhaitez.</span></li>
-        <li><strong>Un pharmacien vous répond</strong><span>Avec une routine en trois temps : le matin, le soir et chaque semaine, étape par étape.</span></li>
-        <li><strong>Vous ajoutez la routine au panier</strong><span>Un seul bouton met tous les produits conseillés dans votre panier.</span></li>
-        <li><strong>On fait le point à 14 et 30 jours</strong><span>Un suivi avec photos avant et après, pour ajuster si besoin.</span></li>
+      <h2>${H.conseil.h}</h2>
+      <ol class="steps steps-compact">
+        ${H.conseil.steps.map((s) => `<li><strong>${s}</strong></li>`).join('\n        ')}
       </ol>
-      <p style="margin-top:28px">Pas le temps d'une consultation ? Le test « Quel est mon type de peau ? » se fait en 8 questions.</p>
-    </div>
-    <div class="routine" role="img" aria-label="Exemple de réponse dans l'application : une routine matin, soir et chaque semaine, avec un bouton pour tout ajouter au panier">
-      <div class="routine-head">
-        <div class="routine-avatar">S</div>
-        <div><strong>Votre routine personnalisée</strong><span>Réponse de votre pharmacienne</span></div>
+      ${playButton(lang, 'conseil', H.conseil.cta, 'btn-primary', '')}
+      <div class="team-mini">
+        <p class="team-mini-h">${H.team.h}</p>
+        ${t.team.map((m) => `<div class="mini">${portrait(m)}<div><strong>${m.name}</strong><span>${m.role}</span></div></div>`).join('\n        ')}
       </div>
-      <h3>${icon.sun}Matin</h3>
-      <ol><li><b>1</b>Nettoyant doux</li><li><b>2</b>Sérum ciblé</li><li><b>3</b>Écran solaire<em>SPF 50</em></li></ol>
-      <h3>${icon.moon}Soir</h3>
-      <ol><li><b>1</b>Démaquillant</li><li><b>2</b>Crème de nuit</li></ol>
-      <h3>${icon.calendar}Chaque semaine</h3>
-      <ol><li><b>1</b>Exfoliant<em>1 à 2 fois</em></li></ol>
-      <div class="routine-cta">${icon.cart}Ajouter toute ma routine au panier</div>
+    </div>
+    <div class="routine" role="img" aria-label="${esc(c.label)}">
+      <div class="routine-head">
+        <div class="routine-avatar">${c.initial}</div>
+        <div><strong>${c.title}</strong><span>${c.by}</span></div>
+      </div>
+      <h3>${icon.sun}${c.am}</h3>${steps(c.amSteps)}
+      <h3>${icon.moon}${c.pm}</h3>${steps(c.pmSteps)}
+      <h3>${icon.calendar}${c.week}</h3>${steps(c.weekSteps)}
+      <div class="routine-cta">${icon.cart}${c.cart}</div>
     </div>
   </div>
 </section>
 
-<section class="section" id="pharmaciens">
+<section class="strip section-cream">
   <div class="wrap">
-    <h2>Deux pharmaciens derrière l'application.</h2>
-    <p class="section-lead">Ce sont eux qui choisissent les produits du catalogue et qui répondent à vos questions.</p>
-    ${teamHtml()}
+    <ul class="strip-grid" role="list">
+      ${H.order.map(([ti, d], i) => `<li>${[icon.truck, icon.cash, icon.gift][i]}<div><strong>${ti}</strong><span>${d}</span></div></li>`).join('\n      ')}
+    </ul>
   </div>
 </section>
 
-<section class="section section-cream" id="boutique">
-  <div class="wrap split">
-    <div class="screens">
-      <div class="arch"></div>
-      ${phone('ecran-boutique', "Écran Boutique de l'application : filtres par marque, objectif et type de peau")}
-    </div>
-    <div>
-      <h2>La dermo-cosmétique, triée par objectif et par type de peau.</h2>
-      <ul class="feature-list">
-        <li>${icon.filter}<div><strong>Des filtres qui parlent de votre peau</strong><span>Par marque, par objectif (nettoyage, exfoliation…) et par type de peau.</span></div></li>
-        <li>${icon.chat}<div><strong>Une question sur un produit ?</strong><span>Depuis la fiche, demandez s'il convient à votre peau, comment l'utiliser ou s'il est compatible avec votre routine.</span></div></li>
-        <li>${icon.gift}<div><strong>Promotions et livraison offerte</strong><span>Les offres du moment sont signalées sur chaque produit.</span></div></li>
-      </ul>
-      <p class="brands-line">Au catalogue : <b>Eucerin</b>, <b>Bioderma</b>, <b>The Ordinary</b>, <b>Papulex</b> et d'autres marques.</p>
-    </div>
-  </div>
-</section>
-
-<section class="section" id="parfums">
-  <div class="wrap split reverse">
-    <div class="screens">
-      <div class="arch"></div>
-      ${phone('ecran-fiche-parfum', "Fiche parfum dans l'application : Yves Saint Laurent Libre, 90 ml, achat en flacon entier ou au millilitre")}
-    </div>
-    <div>
-      <h2>Votre parfum en flacon entier, ou au millilitre.</h2>
-      <p class="section-lead">Sur les parfums qui le proposent, choisissez « Achat au ml » : vous prenez la quantité que vous voulez pour essayer avant d'acheter le flacon.</p>
-      <ul class="feature-list">
-        <li>${icon.flask}<div><strong>Achat au ml</strong><span>Une petite quantité d'un grand parfum, au prix juste.</span></div></li>
-        <li>${icon.filter}<div><strong>Filtres par marque, version et pour qui</strong><span>Eau de parfum, eau de toilette, femme, homme ou mixte.</span></div></li>
-        <li>${icon.star}<div><strong>Des points sur chaque flacon</strong><span>Chaque fiche affiche les points fidélité que le parfum vous rapporte.</span></div></li>
-      </ul>
-    </div>
-  </div>
-</section>
-
-<section class="section section-cream" id="commander">
-  <div class="wrap">
-    <h2>Commandez dans l'app, payez à la réception.</h2>
-    <div class="order-grid">
-      <div class="order-item">${icon.truck}<h3>Toutes les wilayas</h3><p>À domicile ou au bureau de la société de livraison, au choix.</p></div>
-      <div class="order-item">${icon.cash}<h3>Frais affichés avant de valider</h3><p>Ils dépendent de votre wilaya et de la société de livraison.</p></div>
-      <div class="order-item">${icon.gift}<h3>Offerte dès ${da(SITE.freeShipping)}</h3><p>Le panier vous indique combien il reste pour en profiter.</p></div>
-      <div class="order-item">${icon.star}<h3>Des points à chaque commande</h3><p>Ajoutés à la livraison, à échanger dans la Boutique fidélité.</p></div>
-    </div>
-  </div>
-</section>
-
-${selection.length ? `<section class="section" id="selection">
-  <div class="wrap">
-    <div class="section-head">
-      <h2>Quelques produits du catalogue</h2>
-      <a class="link" href="/produits/">Voir tout le catalogue</a>
-    </div>
-    <div class="grid">
-      ${selection.map(card).join('\n      ')}
-    </div>
-  </div>
-</section>` : ''}
-
-<section class="section section-cream" id="questions">
+<section class="section" id="questions">
   <div class="wrap faq-split">
     <div>
-      <h2>Vos questions</h2>
-      <p class="section-lead">Toutes les réponses sont sur la page <a class="link" href="/faq/">questions fréquentes</a>.</p>
+      <h2>${H.faq.h}</h2>
+      <p class="section-lead"><a class="link" href="${loc(lang, '/faq/')}">${H.faq.link}</a></p>
     </div>
-    ${faqHtml(FAQ.slice(0, 5))}
+    ${faqHtml(faqItems)}
   </div>
 </section>
 
@@ -442,251 +456,201 @@ ${selection.length ? `<section class="section" id="selection">
   <div class="wrap final">
     <div>
       <img class="pipette-mark" src="/assets/img/bellea_pipette_b_inverse.svg" alt="" width="30" height="64">
-      <h2>Bellea est sur Google Play.</h2>
-      <p class="section-lead">Téléchargez l'application, posez votre première question à un pharmacien et découvrez tout le catalogue.</p>
-      ${playButton('final', 'Télécharger sur Google Play', 'btn-light')}
+      <h2>${H.final.h}</h2>
+      <p class="section-lead">${H.final.p}</p>
+      ${playButton(lang, 'final', H.final.btn, 'btn-light btn-lg')}
     </div>
     <div class="qr">
       ${qrSvg}
-      <p>Scannez avec votre téléphone</p>
+      <p>${H.final.qr}</p>
     </div>
   </div>
 </section>`;
 
-  return layout({
-    title: 'Bellea : soins et parfums conseillés par des pharmaciens | Application Android',
-    description: "Bellea, l'application de dermo-cosmétique et de parfums de deux pharmaciens. Conseil personnalisé, routine pour votre peau, livraison dans toutes les wilayas et paiement à la livraison.",
-    path: '/', current: '/', body, jsonld: appJsonLd + faqJsonLd(FAQ.slice(0, 5)),
-  });
+  return layout({ lang, title: H.title, description: H.desc, path: '/', current: '/', body, jsonld: appJsonLd + faqJsonLd(faqItems) });
 }
 
-function teamHtml() {
-  return `<div class="team">
-      <article class="member">
-        <div class="portrait"><!-- Photo : remplacer par <img src="/assets/img/dr-soumia.webp" alt="Dr. Soumia"> --><span aria-hidden="true">S</span></div>
-        <div>
-          <h3>Dr. Soumia</h3>
-          <p class="role">Pharmacienne diplômée, spécialisée en dermocosmétique</p>
-          <p class="bio">Elle vous conseille et vous accompagne dans le choix des soins adaptés à votre peau.</p>
-        </div>
-      </article>
-      <article class="member">
-        <div class="portrait"><!-- Photo : remplacer par <img src="/assets/img/dr-fodil.webp" alt="Dr. Fodil"> --><span aria-hidden="true">F</span></div>
-        <div>
-          <h3>Dr. Fodil</h3>
-          <p class="role">Pharmacien diplômé</p>
-          <p class="bio">« Passionné par le domaine médical et la dermocosmétique, je mets mes connaissances au service du conseil et de l'accompagnement en santé et soins de la peau. »</p>
-        </div>
-      </article>
-    </div>
-    <p class="team-note">Bellea est une boutique 100 % en ligne pour le moment : pas de comptoir, tout se passe dans l'application, du conseil jusqu'à la livraison.</p>`;
-}
-
-function pharmaciens() {
+function pharmaciens(lang) {
+  const P = T[lang].pages.pharmaciens;
   const body = `
 <section class="page-head">
   <div class="wrap">
-    <h1>Les pharmaciens de Bellea</h1>
-    <p>Bellea réunit des pharmaciens passionnés par la santé et la beauté de la peau. Ils choisissent les produits du catalogue et vous conseillent, dans l'application.</p>
+    <h1>${P.h1}</h1>
+    <p>${P.sub}</p>
   </div>
 </section>
 <section class="section" style="padding-top:0">
   <div class="wrap">
-    ${teamHtml()}
+    ${teamFull(lang)}
   </div>
 </section>
 <section class="section section-cream">
   <div class="wrap prose">
-    <h2>Ce qu'ils font pour vous</h2>
-    <ul>
-      <li>Ils répondent à vos questions sur un produit : est-il adapté à votre peau, comment l'utiliser, est-il compatible avec votre routine.</li>
-      <li>Ils lisent vos consultations, avec vos photos si vous en ajoutez, et vous proposent une routine pour le matin, le soir et chaque semaine.</li>
-      <li>Ils prennent de vos nouvelles à 14 et 30 jours pour ajuster la routine si besoin.</li>
-      <li>Ils sélectionnent la dermo-cosmétique et les parfums proposés dans la boutique.</li>
-    </ul>
+    <h2>${P.doH}</h2>
+    <ul>${P.doList.map((li) => `<li>${li}</li>`).join('')}</ul>
     <div class="callout">
-      <p>Posez votre première question dans l'application.</p>
-      ${playButton('pharmaciens')}
+      <p>${P.callout}</p>
+      ${playButton(lang, 'pharmaciens', T[lang].ctaHeader)}
     </div>
   </div>
 </section>`;
-  return layout({
-    title: 'Les pharmaciens de Bellea : Dr. Soumia et Dr. Fodil',
-    description: "Dr. Soumia, pharmacienne spécialisée en dermocosmétique, et Dr. Fodil, pharmacien, vous conseillent dans l'application Bellea.",
-    path: '/pharmaciens/', current: '/pharmaciens/', body,
-  });
+  return layout({ lang, title: P.title, description: P.desc, path: '/pharmaciens/', current: '/pharmaciens/', body });
 }
 
-function livraison() {
+function livraison(lang) {
+  const P = T[lang].pages.livraison;
+  const block = ([h2, parts]) => `<h2>${h2}</h2>\n${parts.map((x) => (Array.isArray(x) ? `<ul>${x.map((li) => `<li>${li}</li>`).join('')}</ul>` : `<p>${x}</p>`)).join('\n')}`;
   const body = `
 <section class="page-head">
   <div class="wrap">
-    <h1>Livraison et paiement</h1>
-    <p>Vous commandez dans l'application, nous livrons dans toutes les wilayas, vous payez à la réception.</p>
+    <h1>${P.h1}</h1>
+    <p>${P.sub}</p>
   </div>
 </section>
 <section class="section" style="padding-top:0">
   <div class="wrap prose">
-    <h2>Où livrons-nous ?</h2>
-    <p>Dans toutes les wilayas d'Algérie. Au moment de commander, vous choisissez :</p>
-    <ul>
-      <li><strong>À domicile</strong> : le livreur vous apporte le colis à l'adresse indiquée.</li>
-      <li><strong>Au bureau</strong> : vous récupérez le colis au bureau de la société de livraison.</li>
-    </ul>
-    <h2>Combien coûte la livraison ?</h2>
-    <p>Bellea travaille avec plusieurs sociétés de livraison. Les frais dépendent donc de votre wilaya et de la société, et s'affichent dans l'application avant de valider la commande. Pas de surprise à la réception.</p>
-    <p>La livraison est <strong>offerte dès ${da(SITE.freeShipping)} d'achat</strong>. Le panier vous indique combien il vous reste pour en profiter, et certains produits sont livrés gratuitement quel que soit le montant.</p>
-    <h2>Comment payer ?</h2>
-    <p>À la livraison, au livreur, quand vous recevez votre colis.</p>
-    <h2>Suivre sa commande</h2>
-    <p>Dans l'application, la rubrique « Mes commandes » montre où en est chaque commande et les points fidélité qu'elle vous rapporte.</p>
+    ${P.blocks.map(block).join('\n    ')}
     <div class="callout">
-      <p>Le catalogue complet et la commande sont dans l'application.</p>
-      ${playButton('livraison')}
+      <p>${P.callout}</p>
+      ${playButton(lang, 'livraison', T[lang].ctaHeader)}
     </div>
   </div>
 </section>`;
-  return layout({
-    title: 'Livraison dans toutes les wilayas et paiement à la livraison | Bellea',
-    description: `Bellea livre dans toutes les wilayas d'Algérie, à domicile ou au bureau. Paiement à la livraison, livraison offerte dès ${SITE.freeShipping.toLocaleString('fr-FR')} DA.`,
-    path: '/livraison/', current: '/livraison/', body,
-  });
+  return layout({ lang, title: P.title, description: P.desc, path: '/livraison/', current: '/livraison/', body });
 }
 
-function faqPage() {
+function faqPage(lang) {
+  const t = T[lang];
+  const P = t.pages.faq;
   const body = `
 <section class="page-head">
   <div class="wrap">
-    <h1>Questions fréquentes</h1>
-    <p>Commande, livraison, conseils et fidélité : l'essentiel en quelques lignes.</p>
+    <h1>${P.h1}</h1>
+    <p>${P.sub}</p>
   </div>
 </section>
 <section class="section" style="padding-top:0">
   <div class="wrap">
-    ${faqHtml(FAQ)}
+    ${faqHtml(t.faq)}
     <div class="callout" style="max-width:820px">
-      <p>Une autre question ? Posez-la à un pharmacien dans l'application.</p>
-      ${playButton('faq')}
+      <p>${P.callout}</p>
+      ${playButton(lang, 'faq', t.ctaHeader)}
     </div>
   </div>
 </section>`;
-  return layout({
-    title: 'Questions fréquentes | Bellea',
-    description: "Commander, livraison, paiement, conseils de pharmaciens, parfums au millilitre, points fidélité : les réponses aux questions sur l'application Bellea.",
-    path: '/faq/', current: '/faq/', body, jsonld: faqJsonLd(FAQ),
-  });
+  return layout({ lang, title: P.title, description: P.desc, path: '/faq/', current: '/faq/', body, jsonld: faqJsonLd(t.faq) });
 }
 
-function catalogue(products) {
+function catalogue(lang, products) {
+  const C = T[lang].catalogue;
   const body = `
 <section class="page-head" style="padding-bottom:24px">
   <div class="wrap">
-    <h1>Le catalogue Bellea</h1>
-    <p>Consultez les produits ici, commandez-les dans l'application.</p>
+    <h1>${C.h1}</h1>
+    <p>${C.sub}</p>
   </div>
 </section>
 <section class="wrap" style="padding-bottom:var(--section)">
   <div class="toolbar">
-    <div class="tabs" role="group" aria-label="Type de produit">
-      <button type="button" data-type="soin" aria-pressed="true">Soins</button>
-      <button type="button" data-type="parfum" aria-pressed="false">Parfums</button>
+    <div class="tabs" role="group" aria-label="${C.tabsLabel}">
+      <button type="button" data-type="soin" aria-pressed="true">${C.soins}</button>
+      <button type="button" data-type="parfum" aria-pressed="false">${C.parfums}</button>
     </div>
-    <label class="field"><span class="visually-hidden">Rechercher un produit</span>${icon.search}<input id="q" type="search" placeholder="Rechercher un produit ou une marque" autocomplete="off"></label>
-    <label><span class="visually-hidden">Marque</span><select id="marque" class="select"><option value="">Toutes les marques</option></select></label>
+    <label class="field"><span class="visually-hidden">${C.searchLabel}</span>${icon.search}<input id="q" type="search" placeholder="${esc(C.search)}" autocomplete="off"></label>
+    <label><span class="visually-hidden">${C.brand}</span><select id="marque" class="select"><option value="">${C.allBrands}</option></select></label>
   </div>
-  <p class="count" id="count" aria-live="polite">${products.length} produits</p>
-  <div class="grid" id="catalogue" style="margin-top:20px">
-    ${products.map(card).join('\n    ')}
+  <p class="count" id="count" aria-live="polite">${C.many.replace('{n}', products.length)}</p>
+  <div class="grid" id="catalogue" style="margin-top:20px" data-one="${esc(C.one)}" data-many="${esc(C.many)}" data-all="${esc(C.allBrands)}">
+    ${products.map((p) => card(p, lang)).join('\n    ')}
   </div>
   <div class="empty" id="empty">
-    <strong>Aucun produit ne correspond.</strong>
-    Essayez un autre mot ou une autre marque.
-    <div><button class="btn btn-primary btn-small" type="button" id="reset">Effacer la recherche</button></div>
+    <strong>${C.emptyT}</strong>
+    ${C.emptyD}
+    <div><button class="btn btn-primary btn-small" type="button" id="reset">${C.reset}</button></div>
   </div>
 </section>`;
-  return layout({
-    title: 'Catalogue : dermo-cosmétique et parfums | Bellea',
-    description: "Tous les soins de dermo-cosmétique et parfums de Bellea, avec leurs prix. Commande dans l'application, livraison dans toutes les wilayas.",
-    path: '/produits/', current: '/produits/', body,
-  });
+  return layout({ lang, title: C.title, description: C.desc, path: '/produits/', current: '/produits/', body });
 }
 
-function productPage(p, all) {
+function productPage(lang, p, all) {
+  const t = T[lang];
+  const P = t.product;
+  const da = daFor(lang);
   const url = productPath(p);
-  const kind = p.type === 'parfum' ? 'Parfums' : 'Soins';
+  const kind = p.type === 'parfum' ? P.parfums : P.soins;
   const tags = p.type === 'parfum'
-    ? [p.version, p.pourQui, p.volume ? `${p.volume} ${p.unite || 'ml'}` : '', p.auMl ? 'Disponible au ml' : '']
-    : [p.effet, p.forme, p.volume ? `${p.volume} ${p.unite}` : '', ...(p.typeDePeau || []).map((t) => `Peau ${t.toLowerCase()}`)];
+    ? [p.version, p.pourQui, p.volume ? `${p.volume} ${P.unit(p.unite)}` : '', p.auMl ? P.auMl : '']
+    : [p.effet, p.forme, p.volume ? `${p.volume} ${P.unit(p.unite)}` : '', ...(p.typeDePeau || []).map(P.peau)];
   const related = all.filter((o) => o.id !== p.id && o.type === p.type && o.marque === p.marque).slice(0, 4);
   const more = related.length ? related : all.filter((o) => o.id !== p.id && o.type === p.type).slice(0, 4);
-  const appLink = `href="${play('fiche-produit')}" data-app-path="${url}"`;
-  const desc = clip(`${fullName(p)}${subtitle(p) ? `, ${subtitle(p).toLowerCase()}` : ''} à ${da(p.prix)}. ${p.description || "Commandez-le dans l'application Bellea, livraison dans toutes les wilayas et paiement à la livraison."}`);
+  const appLink = `href="${playL(lang, 'fiche-produit')}" data-app-path="${url}"`;
+  const desc = clip(`${fullName(p)}${subtitle(p) ? `, ${subtitle(p).toLowerCase()}` : ''} : ${da(p.prix)}. ${p.description || P.metaFallback}`);
+  const promo = p.ancienPrix > p.prix;
   const jsonld = `<script type="application/ld+json">${JSON.stringify({
     '@context': 'https://schema.org', '@type': 'Product',
     name: fullName(p), brand: { '@type': 'Brand', name: p.marque },
     image: p.image.startsWith('http') ? p.image : SITE.url + p.image,
     description: p.description || undefined,
-    offers: { '@type': 'Offer', price: String(p.prix), priceCurrency: 'DZD', availability: 'https://schema.org/InStock', url: SITE.url + url },
+    offers: { '@type': 'Offer', price: String(p.prix), priceCurrency: 'DZD', availability: 'https://schema.org/InStock', url: SITE.url + loc(lang, url) },
   })}</script>`;
-
-  const text = [['Description', p.description], ["Mode d'emploi", p.utilisation], ['Ingrédients', p.ingredient]]
-    .filter(([, t]) => t && t.trim())
-    .map(([h, t]) => `<h2>${h}</h2><p>${esc(t.trim())}</p>`).join('\n');
+  const text = [[P.sections[0], p.description], [P.sections[1], p.utilisation], [P.sections[2], p.ingredient]]
+    .filter(([, x]) => x && x.trim())
+    .map(([h2, x]) => `<h2>${h2}</h2><p dir="auto">${esc(x.trim())}</p>`).join('\n');
+  const buyIcons = [icon.shield, icon.refund, icon.truck, icon.cash];
 
   const body = `
 <div class="wrap">
-  <nav class="crumbs" aria-label="Fil d'Ariane">
-    <a href="/produits/${p.type === 'parfum' ? '?type=parfum' : ''}">${kind}</a><span aria-hidden="true">/</span><span>${esc(p.marque)}</span>
+  <nav class="crumbs" aria-label="${P.crumbs}">
+    <a href="${loc(lang, `/produits/${p.type === 'parfum' ? '?type=parfum' : ''}`)}">${kind}</a><span aria-hidden="true">/</span><span dir="auto">${esc(p.marque)}</span>
   </nav>
   <article class="product">
-    <div class="product-media"><img src="${esc(p.image)}" alt="${esc(fullName(p))}" width="600" height="600" fetchpriority="high"></div>
+    <div class="product-media">${promo ? `<span class="card-flag">−${Math.round((1 - p.prix / p.ancienPrix) * 100)}%</span>` : ''}<img src="${esc(p.image)}" alt="${esc(fullName(p))}" width="600" height="600" fetchpriority="high"></div>
     <div>
-      <p class="product-brand">${esc(p.marque)}</p>
-      <h1>${esc(p.nom)}</h1>
-      ${tags.filter(Boolean).length ? `<div class="tags">${tags.filter(Boolean).map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}
-      <p class="price">${da(p.prix)}${p.ancienPrix > p.prix ? ` <s>${da(p.ancienPrix)}</s>` : ''}</p>
-      ${p.points > 0 ? `<p class="points">${icon.star}+${Math.round(p.points)} points fidélité</p>` : ''}
+      <p class="product-brand" dir="auto">${esc(p.marque)}</p>
+      <h1 dir="auto">${esc(p.nom)}</h1>
+      ${tags.filter(Boolean).length ? `<div class="tags">${tags.filter(Boolean).map((x) => `<span class="tag" dir="auto">${esc(x)}</span>`).join('')}</div>` : ''}
+      <p class="price">${da(p.prix)}${promo ? ` <s>${da(p.ancienPrix)}</s>` : ''}</p>
+      ${p.points > 0 ? `<p class="points">${icon.star}${P.points(Math.round(p.points))}</p>` : ''}
       <div class="buy">
-        <a class="btn btn-primary" ${appLink}>${icon.download}Commander dans l'app</a>
+        <a class="btn btn-primary btn-lg" ${appLink}>${icon.download}${P.cta}</a>
         <ul>
-          <li>${icon.check}Application gratuite sur Google Play</li>
-          <li>${icon.check}Livraison dans toutes les wilayas, offerte dès ${da(SITE.freeShipping)}</li>
-          <li>${icon.check}Paiement à la livraison</li>
+          ${P.buy.map((b, i) => `<li>${buyIcons[i]}${b}</li>`).join('\n          ')}
         </ul>
       </div>
       ${text ? `<div class="product-text">${text}</div>` : ''}
-      <div class="ask">${icon.chat}<div><strong>Une question sur ce produit ?</strong><p>Est-il adapté à votre peau ? Comment l'utiliser ? Un pharmacien vous répond dans l'application.</p></div></div>
+      <div class="ask">${icon.chat}<div><strong>${P.askT}</strong><p>${P.askD}</p></div></div>
     </div>
   </article>
 </div>
 ${more.length ? `<section class="section section-cream">
   <div class="wrap">
-    <h2>${related.length ? `Aussi chez ${esc(p.marque)}` : `D'autres ${kind.toLowerCase()}`}</h2>
-    <div class="grid">${more.map(card).join('\n')}</div>
+    <h2 dir="auto">${related.length ? esc(P.related(p.marque)) : P.others(kind)}</h2>
+    <div class="grid">${more.map((o) => card(o, lang)).join('\n')}</div>
   </div>
 </section>` : ''}
 <div class="sticky-cta">
   <span class="price-mini">${da(p.prix)}</span>
-  <a class="btn btn-primary" ${appLink}>Commander dans l'app</a>
+  <a class="btn btn-primary" ${appLink}>${P.ctaShort}</a>
 </div>`;
 
   return layout({
-    title: `${fullName(p)} : ${da(p.prix)} | Bellea`,
-    description: desc, path: url, current: '/produits/', body, image: p.image, jsonld, bodyClass: 'has-sticky',
+    lang, title: `${fullName(p)} : ${da(p.prix)} | Bellea`,
+    description: desc, path: url, current: '/produits/', body, image: p.image, jsonld, bodyClass: 'has-sticky', appbar: false,
   });
 }
 
-function notFound() {
+function notFound(lang) {
+  const P = T[lang].pages.notFound;
   const body = `
 <section class="notfound">
   <div class="wrap">
     <img src="/assets/img/bellea_pipette_b.svg" alt="" width="44" height="96">
-    <h1>Cette page n'existe pas ou plus.</h1>
-    <p>Le produit a peut-être été retiré du catalogue.</p>
-    <a class="btn btn-primary" href="/produits/">Voir le catalogue</a>
+    <h1>${P.h1}</h1>
+    <p>${P.p}</p>
+    <a class="btn btn-primary" href="${loc(lang, '/produits/')}">${P.btn}</a>
   </div>
 </section>`;
-  return layout({ title: 'Page introuvable | Bellea', description: 'Cette page n’existe pas.', path: '/404.html', body });
+  return layout({ lang, title: P.title, description: P.h1, path: '/404.html', body, alt: false });
 }
 
 // ---------------------------------------------------------------------------
@@ -705,7 +669,8 @@ const assetlinks = JSON.stringify([{
 
 function sitemap(products) {
   const today = new Date().toISOString().slice(0, 10);
-  const urls = ['/', '/produits/', '/pharmaciens/', '/livraison/', '/faq/', ...products.map(productPath)];
+  const paths = ['/', '/produits/', '/pharmaciens/', '/livraison/', '/faq/', ...products.map(productPath)];
+  const urls = LANGS.flatMap((l) => paths.map((p) => loc(l, p)));
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.map((u) => `  <url><loc>${SITE.url}${u}</loc><lastmod>${today}</lastmod></url>`).join('\n')}
@@ -717,7 +682,7 @@ ${urls.map((u) => `  <url><loc>${SITE.url}${u}</loc><lastmod>${today}</lastmod><
 // Génération
 // ---------------------------------------------------------------------------
 // Typographie française : espace insécable avant ? ! : ; % » et après «
-const frenchSpaces = (html) => html.replace(/ ([?!:;%»])/g, '\u00a0$1').replace(/« /g, '«\u00a0');
+const frenchSpaces = (html) => html.replace(/ ([?!:;%»])/g, ' $1').replace(/« /g, '« ');
 
 const withBase = (html) => !BASE ? html : html
   .replace(/(href|src)="\/(?!\/)/g, `$1="${BASE}/`)
@@ -740,14 +705,19 @@ const withVersions = (html) => html.replace(/\/(assets\/[\w./-]+\.(?:webp|png|sv
   (m, asset) => { const h = assetHash(asset); return h ? `${m}?v=${h}` : m; });
 
 async function write(rel, content) {
-  if (rel.endsWith('.html')) content = withVersions(withBase(frenchSpaces(content)));
+  if (rel.endsWith('.html')) {
+    if (!rel.startsWith('ar/')) content = frenchSpaces(content);
+    content = withVersions(withBase(content));
+  }
   const file = path.join(DIST, rel);
   await mkdir(path.dirname(file), { recursive: true });
   await writeFile(file, content);
 }
 
 async function main() {
-  const products = (await loadProducts()).sort((a, b) => a.marque.localeCompare(b.marque, 'fr') || a.nom.localeCompare(b.nom, 'fr'));
+  const products = (await loadProducts())
+    .map((p) => ({ ...p, nom: p.nom.replace(/ %/g, '\u00a0%') })) // « 7 % » ne se coupe jamais en fin de ligne
+    .sort((a, b) => a.marque.localeCompare(b.marque, 'fr') || a.nom.localeCompare(b.nom, 'fr'));
   if (existsSync(DIST)) await rm(DIST, { recursive: true });
   await mkdir(DIST, { recursive: true });
   await cp(path.join(ROOT, 'src/img'), path.join(DIST, 'assets/img'), { recursive: true });
@@ -757,22 +727,26 @@ async function main() {
   await cp(path.join(ROOT, 'src/site.js'), path.join(DIST, 'assets/site.js'));
 
   const qr = await QRCode.toString(play('qr-code'), { type: 'svg', margin: 0, errorCorrectionLevel: 'M', color: { dark: '#141414', light: '#ffffff' } });
-  const qrSvg = qr.replace('<svg ', '<svg role="img" aria-label="QR code vers Bellea sur Google Play" ');
+  const qrSvg = qr.replace('<svg ', '<svg role="img" aria-label="QR code Google Play" ');
 
-  await write('index.html', home(products, qrSvg));
-  await write('produits/index.html', catalogue(products));
-  await write('pharmaciens/index.html', pharmaciens());
-  await write('livraison/index.html', livraison());
-  await write('faq/index.html', faqPage());
-  await write('404.html', notFound());
-  for (const p of products) await write(`${productPath(p).slice(1)}index.html`, productPage(p, products));
+  for (const lang of LANGS) {
+    const dir = lang === 'ar' ? 'ar/' : '';
+    await write(`${dir}index.html`, home(lang, products, qrSvg));
+    await write(`${dir}produits/index.html`, catalogue(lang, products));
+    await write(`${dir}pharmaciens/index.html`, pharmaciens(lang));
+    await write(`${dir}livraison/index.html`, livraison(lang));
+    await write(`${dir}faq/index.html`, faqPage(lang));
+    for (const p of products) await write(`${dir}${productPath(p).slice(1)}index.html`, productPage(lang, p, products));
+  }
+  await write('404.html', notFound('fr'));
+  await write('ar/404.html', notFound('ar'));
   await write('.well-known/assetlinks.json', assetlinks);
   await write('sitemap.xml', sitemap(products));
   await write('CNAME', 'bellea.store\n');   // domaine pour GitHub Pages
   await write('.nojekyll', '');              // GitHub Pages : publier aussi /.well-known/
   await write('robots.txt', `User-agent: *\nAllow: /\n\nSitemap: ${SITE.url}/sitemap.xml\n`);
 
-  console.log(`Site généré dans dist/ : ${products.length} fiches produit${SAMPLE ? ' (exemple)' : ''}${BASE ? `, adresses sous ${BASE}/` : ''}.`);
+  console.log(`Site généré dans dist/ : ${products.length} fiches produit × ${LANGS.length} langues${SAMPLE ? ' (exemple)' : ''}${BASE ? `, adresses sous ${BASE}/` : ''}.`);
 }
 
 main().catch((e) => { console.error(e.message); process.exit(1); });

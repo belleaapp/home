@@ -12,7 +12,7 @@
       document.body.classList.toggle('menu-open', open);
       document.body.style.overflow = open ? 'hidden' : '';
       btn.setAttribute('aria-expanded', String(open));
-      btn.setAttribute('aria-label', open ? 'Fermer le menu' : 'Ouvrir le menu');
+      btn.setAttribute('aria-label', open ? btn.dataset.close : btn.dataset.open);
     };
     btn.addEventListener('click', () => setMenu(!nav.classList.contains('open')));
     nav.addEventListener('click', (e) => { if (e.target.closest('a')) setMenu(false); });
@@ -24,6 +24,42 @@
     // Retour arrière vers une page restée en cache avec le menu ouvert.
     addEventListener('pageshow', () => setMenu(false));
   }
+
+  // Barre « Installer » (mobile) : apparaît quand le bouton principal du haut
+  // n'est plus visible, pour ne jamais afficher deux fois le même appel.
+  const appbar = document.getElementById('appbar');
+  if (appbar) {
+    const setBar = (show) => {
+      appbar.classList.toggle('show', show);
+      appbar.setAttribute('aria-hidden', String(!show));
+      appbar.querySelector('a').tabIndex = show ? 0 : -1;
+    };
+    const heroCta = document.querySelector('[data-hero-cta]');
+    if (heroCta && 'IntersectionObserver' in window) {
+      new IntersectionObserver(([e]) => setBar(!e.isIntersecting && e.boundingClientRect.top < 0)).observe(heroCta);
+    } else {
+      setBar(true);
+    }
+  }
+
+  // Carrousels produits : flèches (ordinateur), sens inversé en arabe
+  document.querySelectorAll('.rail-wrap').forEach((wrap) => {
+    const list = wrap.querySelector('.rail');
+    const rtl = getComputedStyle(list).direction === 'rtl';
+    const [prev, next] = [wrap.querySelector('.prev'), wrap.querySelector('.next')];
+    const update = () => {
+      const max = list.scrollWidth - list.clientWidth - 2;
+      const pos = Math.abs(list.scrollLeft);
+      prev.disabled = pos <= 2;
+      next.disabled = pos >= max;
+    };
+    wrap.querySelectorAll('.rail-btn').forEach((b) => b.addEventListener('click', () => {
+      list.scrollBy({ left: Number(b.dataset.dir) * list.clientWidth * 0.85 * (rtl ? -1 : 1), behavior: 'smooth' });
+    }));
+    list.addEventListener('scroll', update, { passive: true });
+    addEventListener('resize', update);
+    update();
+  });
 
   // Sur Android : « Ouvrir dans l'app » ouvre l'app si elle est installée
   // (même page grâce aux App Links), sinon la fiche Google Play.
@@ -50,7 +86,7 @@
   function fillBrands() {
     const current = brand.value;
     const names = [...new Set(cards.filter((c) => c.dataset.type === type).map((c) => c.dataset.brand))].sort((a, b) => a.localeCompare(b, 'fr'));
-    brand.innerHTML = '<option value="">Toutes les marques</option>' + names.map((n) => `<option>${n.replace(/</g, '&lt;')}</option>`).join('');
+    brand.innerHTML = `<option value="">${list.dataset.all}</option>` + names.map((n) => `<option>${n.replace(/</g, '&lt;')}</option>`).join('');
     if (names.includes(current)) brand.value = current;
   }
 
@@ -63,7 +99,7 @@
       if (ok) shown++;
     }
     tabs.forEach((t) => t.setAttribute('aria-pressed', String(t.dataset.type === type)));
-    count.textContent = shown === 1 ? '1 produit' : `${shown} produits`;
+    count.textContent = shown === 1 ? list.dataset.one : list.dataset.many.replace('{n}', shown);
     empty.classList.toggle('show', shown === 0);
   }
 
